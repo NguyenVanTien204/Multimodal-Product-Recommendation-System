@@ -1,0 +1,27 @@
+{
+  "source": "Amazon Reviews 2023 / Clothing_Shoes_and_Jewelry",
+  "method": "two-pass streamed stable-hash user pool; activity strata; full histories; iterative k-core; chronological leave-last-out",
+  "seed": "20260813",
+  "target_users": 30000,
+  "target_interactions": 350000,
+  "counts": [
+    {
+      "split": "valid",
+      "rows": 12134,
+      "users": 12134,
+      "items": 9051
+    },
+    {
+      "split": "train",
+      "rows": 89387,
+      "users": 12134,
+      "items": 30226
+    },
+    {
+      "split": "test",
+      "rows": 12134,
+      "users": 12134,
+      "items": 8890
+    }
+  ]
+}

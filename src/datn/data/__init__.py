@@ -1,0 +1,2 @@
+"""Resource-aware data preparation."""
+
