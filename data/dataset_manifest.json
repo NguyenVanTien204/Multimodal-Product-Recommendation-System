@@ -6,22 +6,22 @@
   "target_interactions": 350000,
   "counts": [
     {
-      "split": "valid",
-      "rows": 12134,
-      "users": 12134,
-      "items": 9051
+      "split": "train",
+      "rows": 171788,
+      "users": 29096,
+      "items": 122378
     },
     {
-      "split": "train",
-      "rows": 89387,
-      "users": 12134,
-      "items": 30226
+      "split": "valid",
+      "rows": 29096,
+      "users": 29096,
+      "items": 25503
     },
     {
       "split": "test",
-      "rows": 12134,
-      "users": 12134,
-      "items": 8890
+      "rows": 29096,
+      "users": 29096,
+      "items": 24537
     }
   ]
 }

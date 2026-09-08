@@ -11,6 +11,8 @@
 2. [Tổng quan đề tài và hệ thống](./02-overview.md)
 3. [Roadmap triển khai 12 tuần](./03-roadmap.md)
 4. [Đặc tả nghiệp vụ và yêu cầu hệ thống](./04-business-requirements.md)
+5. [Báo cáo phân tích tập dữ liệu](./dataset_analysis.md)
+6. [Báo cáo trích xuất đặc trưng đa phương thức (Embeddings)](./multimodal_embeddings_report.md)
 
 ## Nguyên tắc phạm vi
 
