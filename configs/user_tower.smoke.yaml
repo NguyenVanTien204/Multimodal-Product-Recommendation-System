@@ -1,0 +1,41 @@
+data:
+  items_path: data/items.parquet
+  train_path: data/train.parquet
+  valid_path: data/valid.parquet
+  test_path: data/test.parquet
+  artifacts_dir: data/artifacts/user_tower_smoke
+
+model:
+  d_model: 32
+  n_heads: 2
+  n_layers: 2
+  d_ff: 64
+  dropout: 0.2
+  max_seq_len: 20
+
+train:
+  batch_size: 256
+  epochs: 2
+  lr: 0.001
+  weight_decay: 0.0
+  num_negatives: 1
+  patience: 20
+  eval_every: 1
+  grad_clip_norm: 5.0
+  seed: 20260813
+  device: auto
+
+eval:
+  ks: [10]
+  batch_size: 512
+  exclude_seen: true
+
+content:
+  enabled: [image, text]
+  sources:
+    - name: image
+      embeddings_path: data/embedding/image_embeddings.npy
+      metadata_path: data/embedding/image_embedding_metadata.parquet
+    - name: text
+      embeddings_path: data/embedding/text_embeddings.npy
+      metadata_path: data/embedding/text_embedding_metadata.parquet

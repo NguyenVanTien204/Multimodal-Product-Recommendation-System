@@ -13,6 +13,10 @@
 4. [Đặc tả nghiệp vụ và yêu cầu hệ thống](./04-business-requirements.md)
 5. [Báo cáo phân tích tập dữ liệu](./dataset_analysis.md)
 6. [Báo cáo trích xuất đặc trưng đa phương thức (Embeddings)](./multimodal_embeddings_report.md)
+7. [Thiết kế cơ sở dữ liệu vector (Qdrant)](./qdrant_vector_db_design.md)
+8. [Thiết kế User Tower (Attention/Transformer trên chuỗi hành vi)](./user_tower_design.md)
+9. [Báo cáo thực nghiệm & Ablation Study - User Tower](./user_tower_experiments.md)
+10. [Nhật ký kiểm chứng & Phản biện học thuật (Logs)](./logs/README.md)
 
 ## Nguyên tắc phạm vi
 

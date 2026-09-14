@@ -184,18 +184,18 @@ Dưới đây là kết quả kiểm thử thực nghiệm trên 4 nhóm ngành 
 
 ---
 
-### 3.2. Bảng Thẩm định Kỹ thuật Text Embeddings *(Sẽ cập nhật số liệu)*
+### 3.2. Bảng Thẩm định Kỹ thuật Text Embeddings (Đã đối soát thực tế)
 
 | Chỉ số kiểm tra | Kết quả thực tế | Kỳ vọng thiết kế | Trạng thái |
 | :--- | :--- | :--- | :---: |
-| **Đường dẫn tệp** | `data/embedding/text_embeddings.npy` | `text_embeddings.npy` | ⏳ Pending |
-| **Dung lượng tệp** | *TBD (Dự kiến ~594 MB nếu 1024-d)* | Phù hợp số chiều $D$ | ⏳ Pending |
-| **Kích thước ma trận (Shape)** | `(152086, D)` *(D = 1024)* | Đúng 152,086 items | ⏳ Pending |
-| **Kiểu dữ liệu (dtype)** | `float32` | `np.float32` | ⏳ Pending |
-| **Kiểm tra NaN / Inf** | *TBD (bắt buộc = 0)* | 0 NaN, 0 Inf | ⏳ Pending |
-| **Độ dài L2 Norm** | *TBD (bắt buộc = 1.0)* | Normalized unit vector | ⏳ Pending |
-| **File Metadata** | `data/embedding/text_embedding_metadata.parquet` | Schema: `index`, `item_id` | ⏳ Pending |
-| **Khớp thứ tự với `items.parquet`** | *TBD* | Khớp 100% theo thứ tự | ⏳ Pending |
+| **Đường dẫn tệp** | `data/embedding/text_embeddings.npy` | `text_embeddings.npy` | ✅ PASS |
+| **Dung lượng tệp** | **622,944,384 bytes** (~594.09 MB) | Phù hợp số chiều $D=1024$ | ✅ PASS |
+| **Kích thước ma trận (Shape)** | **(152086, 1024)** | Đúng 152,086 items | ✅ PASS |
+| **Kiểu dữ liệu (dtype)** | `float32` | `np.float32` | ✅ PASS |
+| **Kiểm tra NaN / Inf** | **0 NaN, 0 Inf** | 0 NaN, 0 Inf | ✅ PASS |
+| **Độ dài L2 Norm** | **~1.000000** (Mean = 1.0000) | Normalized unit vector | ✅ PASS |
+| **File Metadata** | `data/embedding/text_embedding_metadata.parquet` | Schema: `index`, `item_id` | ✅ PASS |
+| **Khớp thứ tự với `items.parquet`** | **152,086 / 152,086 (100% khớp tuyệt đối)** | Khớp 100% theo thứ tự | ✅ PASS |
 
 ---
 

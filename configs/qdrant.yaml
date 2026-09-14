@@ -1,0 +1,28 @@
+connection:
+  url: http://localhost:6333
+  api_key: null # set via QDRANT_API_KEY env var if the deployment requires auth
+  timeout_s: 30
+
+collection:
+  name: products
+  vector_size: 1024
+  distance: Cosine
+  hnsw:
+    m: 32
+    ef_construct: 128
+  on_disk_vectors: false
+  on_disk_payload: false
+  shard_number: 1
+  replication_factor: 1
+
+paths:
+  items: data/items.parquet
+  image_embeddings: "data/embedding/image_embeddings (1).npy"
+  image_embedding_metadata: "data/embedding/image_embedding_metadata (1).parquet"
+  text_embeddings: data/embedding/text_embeddings.npy
+  text_embedding_metadata: data/embedding/text_embedding_metadata.parquet
+
+import:
+  batch_size: 256
+  parallel: 2
+  wait: false

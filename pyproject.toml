@@ -16,9 +16,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9"]
+vectordb = ["qdrant-client>=1.12,<1.13", "numpy>=1.26,<3"]
+recommenders = ["torch>=2.2,<3", "numpy>=1.26,<3"]
 
 [project.scripts]
 datn-data = "datn.data.cli:main"
+datn-vectordb = "datn.vectordb.cli:main"
+datn-user-tower = "datn.recommenders.user_tower.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/datn"]

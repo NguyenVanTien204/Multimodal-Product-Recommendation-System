@@ -165,21 +165,31 @@ Agent là lớp điều phối. Khi agent không khả dụng, recommender, retr
 
 ### Late fusion
 
-Sau khi projection về cùng không gian/chiều biểu diễn:
+`E_cf` là vector **user** (đầu ra User Tower, xem
+[`user_tower_design.md`](./user_tower_design.md)); `E_image`/`E_text` là vector
+**item** (CLIP). Hai không gian này không được cộng trực tiếp — chỉ so khớp
+user-item qua tích vô hướng. Fusion diễn ra ở **mức điểm số**, sau dot product,
+không ở mức vector:
 
 ```text
-E_content = α E_image + β E_text
-E_final   = λ E_cf + (1 - λ) E_content
+score_cf(u, i)      = E_cf(u)      · E_id(i)
+score_content(u, i) = E_cf(u)      · (α E_image(i) + β E_text(i))
+score_final(u, i)   = λ · score_cf(u, i) + (1 - λ) · score_content(u, i)
 ```
 
-Các vector dùng cosine similarity cần được chuẩn hóa trước khi lập FAISS index. Embedding phải được cache và version theo encoder/config/dataset manifest.
+trong đó `E_id(i)` và `α E_image(i) + β E_text(i)` cộng lại thành vector item đầy đủ
+`e_i` mà User Tower dùng để tự-attention và để làm mục tiêu huấn luyện (chi tiết ở
+`user_tower_design.md` mục 2-3). Các vector dùng cosine similarity cần được chuẩn hóa
+trước khi lập FAISS index. Embedding phải được cache và version theo encoder/config/dataset manifest.
 
-## 8. Thiết kế thí nghiệm
+## 8. Thiết kế thí nghiệm & Kết quả thực nghiệm
+
+### 8.1. Ma trận phân loại mô hình
 
 | Model | Interaction | Text | Image |
 |---|:---:|:---:|:---:|
 | Popularity | ✓ |  |  |
-| Collaborative | ✓ |  |  |
+| Collaborative (ID-only) | ✓ |  |  |
 | Text-only |  | ✓ |  |
 | Image-only |  |  | ✓ |
 | Image + Text |  | ✓ | ✓ |
@@ -187,17 +197,19 @@ Các vector dùng cosine similarity cần được chuẩn hóa trước khi l�
 | CF + Image | ✓ |  | ✓ |
 | Full Multimodal | ✓ | ✓ | ✓ |
 
-Metric chính: `Recall@10`, `NDCG@10`, `HitRate@10`.
+### 8.2. Kết quả Thực nghiệm Ablation Study (Full-Ranking trên 152.086 items)
 
-Thí nghiệm bắt buộc:
+Chi tiết báo cáo và quy trình thực nghiệm xem tại [`docs/user_tower_experiments.md`](./user_tower_experiments.md).
 
-- Main comparison giữa các nhóm model.
-- Ablation loại lần lượt CF, image và text.
-- Quét hệ số fusion `λ ∈ {0, 0.25, 0.5, 0.75, 1}`; α/β được cấu hình và chọn trên validation.
-- Báo cáo riêng cho toàn bộ test items và nhóm item có số interaction trong train `<= 10`, `<= 5`.
-- Phân tích sai số bằng ví dụ định tính, coverage theo nhóm item và các trường hợp modality gây nhiễu.
+| Biến thể (Variant) | Phương thức | Test HitRate@10 | Test NDCG@10 | Test HitRate@50 | Test NDCG@50 | Ghi chú & Đánh giá |
+|---|---|:---:|:---:|:---:|:---:|---|
+| **Random Baseline** | Không | 0.0066% | 0.0030% | 0.0329% | 0.0078% | Ngẫu nhiên tuyệt đối |
+| **Collaborative (CF)** | Chỉ ID tương tác | 0.0045% | 0.0017% | 0.0178% | 0.0050% | Thất bại do 62.5% Cold-Start |
+| **CF + Text** | Tương tác + Text CLIP | 0.1026% | 0.0576% | 0.3257% | 0.1043% | Tăng gấp 23x so với CF |
+| **CF + Image** | Tương tác + Image CLIP | 0.1383% | 0.0608% | 0.5532% | 0.1472% | Tăng gấp 31x so với CF (Ảnh > Chữ) |
+| **Full Multimodal** | **Tương tác + Ảnh + Chữ** | **0.1428%** | **0.0721%** | **0.5711%** | **0.1649%** | **Đạt đỉnh toàn diện (gấp 41.7x NDCG của CF)** |
 
-Test set chỉ dùng cho báo cáo cuối; chọn model và hyperparameter dựa trên validation.
+Metric chính: `Recall@K`, `NDCG@K`, `HitRate@K` ($K \in \{10, 20, 50\}$). Kiểm thử trên 22.414 người dùng với 152.086 sản phẩm.
 
 ## 9. Conversational recommendation
 
