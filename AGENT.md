@@ -31,9 +31,9 @@ graph TD
 
     %% Core Recommend Engine
     subgraph RecEngine ["Lớp Gợi ý & Tìm kiếm (Retrieval & Ranking Layer)"]
-        Fusion["Multimodal Late Fusion (CF + Text + Image)"]
+        Fusion["Action-aware Multimodal Two-Tower + Source Union"]
         FaissItem["FAISS Product Index (products.faiss)"]
-        Reranker["Attribute/Business Filter & Reranker"]
+        Reranker["Residual Listwise Reranker + Business Filters"]
     end
 
     %% RAG Engine
@@ -61,8 +61,8 @@ graph TD
     
     %% Retrieval flow
     SessionMgr --> |Updated Filter| Reranker
-    Fusion --> |Generate Candidate Vectors| FaissItem
-    FaissItem --> |Top-K Candidates| Reranker
+    Fusion --> |Generate Session Query + Item Vectors| FaissItem
+    FaissItem --> |Top-K + Popularity/Content Candidates| Reranker
     Reranker --> |Filtered Top-K| ContextBuilder
     
     %% RAG Flow
@@ -94,18 +94,18 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
 ### Trụ cột 2: Vector Indexing & Hybrid Retrieval
 *   **Tiêu chuẩn:** Hệ thống phải hỗ trợ tìm kiếm ngữ nghĩa thời gian thực trên không gian biểu diễn đa phương thức (Multimodal Representation) kết hợp bộ lọc thuộc tính cứng.
 *   **Quy định kỹ thuật:**
-    *   Embeddings của văn bản (`text_embeddings.npy`) và hình ảnh (`image_embeddings.npy`) thu được từ pretrained CLIP-family encoder phải được chuẩn hóa (normalize) trước khi lưu.
+    *   Embeddings của văn bản (`text_embeddings.npy`) và hình ảnh (`image_embeddings.npy`) phải được chuẩn hóa (normalize) trước khi lưu. Khi có raw media, ưu tiên pretrained CLIP-family encoder; với Coveo, dùng vector 50 chiều chính thức do dataset cung cấp, lưu provenance và mask thiếu dữ liệu thay vì tái mã hóa không thể kiểm chứng.
     *   Index tìm kiếm tương đồng phải sử dụng thư viện hiệu năng cao như **FAISS** (`products.faiss` và `reviews.faiss`).
     *   Quy trình tìm kiếm bắt buộc phải hỗ trợ **Hybrid Retrieval**: Lọc trước hoặc lọc sau các điều kiện cứng như khoảng giá (price), danh mục (category), thương hiệu (brand) bằng DuckDB/SQL trước khi trả về danh sách ứng viên Top-K.
 
 ### Trụ cột 3: Core Recommendation & RAG Engine
 *   **Tiêu chuẩn:** Phân tách rõ ràng giữa thuật toán gợi ý (Recommender) và tác vụ sinh ngôn ngữ tự nhiên (RAG).
 *   **Quy định kỹ thuật:**
-    *   **Candidate Generation (Retrieval):** Sử dụng công thức phối hợp muộn (Late Fusion) để tính toán độ tương đồng tổng hợp:
+    *   **Candidate Generation (Retrieval):** Baseline Amazon sử dụng công thức phối hợp muộn (Late Fusion):
         $$E_{\text{content}} = \alpha E_{\text{image}} + \beta E_{\text{text}}$$
         $$E_{\text{final}} = \lambda E_{\text{cf}} + (1 - \lambda) E_{\text{content}}$$
-        Hệ số $\alpha, \beta, \lambda$ phải được tối ưu trên tập Validation.
-    *   **Reranking:** Loại bỏ các sản phẩm đã tương tác trong tập huấn luyện (nếu giao thức yêu cầu) và áp dụng các bộ lọc nghiệp vụ.
+        Hệ số $\alpha, \beta, \lambda$ phải được tối ưu trên tập Validation. Pipeline Coveo dùng action-aware two-tower, trong đó item tower cộng ID residual với projection text/image và session tower mã hóa chuỗi hành vi; candidate union có thể bổ sung popularity/content source. Mọi weight hoặc source size đều chỉ được chọn trên Validation.
+    *   **Reranking:** Loại bỏ các sản phẩm đã tương tác trong context (nếu giao thức yêu cầu), áp dụng các bộ lọc nghiệp vụ, và báo riêng candidate recall, conditional HR và HR end-to-end. Không được force-add ground-truth target vào candidate pool.
     *   **RAG Context Builder:** Trích xuất metadata sản phẩm + $N$ review có điểm `helpful_vote` cao nhất từ `reviews.parquet` (thông qua `reviews.faiss` index) có cùng `item_id`.
     *   **LLM Prompting:** Chỉ chuyển thông tin ngữ cảnh đã truy xuất và profile người dùng vào prompt. **LLM không được tự ý sinh thông tin về giá cả, thông số kỹ thuật hoặc các review không có trong ngữ cảnh được cung cấp (chống Hallucination).**
 

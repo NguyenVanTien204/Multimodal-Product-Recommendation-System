@@ -1,0 +1,51 @@
+project:
+  dataset: "Coveo SIGIR eCommerce 2021"
+  profile: "quick"  # quick: laptop/Kaggle smoke run; full: stronger final experiment
+  seed: 20260922
+
+paths:
+  raw_dir: "data/raw/coveo"
+  processed_dir: "data/processed/coveo_v1"
+  embeddings_dir: "data/processed/coveo_embeddings_v1"
+  retrieval_dir: "data/artifacts/coveo_retrieval_v1"
+  reranker_dir: "data/artifacts/coveo_reranker_v1"
+
+data:
+  train_ratio: 0.80
+  valid_ratio: 0.10
+  min_session_events: 2
+  include_search_clicks: true
+  # Deliberately bounded: a representative dense subset is more suitable for this thesis
+  # than forcing all ~36M events through every ablation.
+  max_sessions_quick: 10000
+  max_sessions_full: 500000
+
+retrieval:
+  max_seq_len: 30
+  d_model: 96
+  n_heads: 4
+  n_layers: 2
+  dropout: 0.20
+  batch_size: 256
+  epochs_quick: 2
+  epochs_full: 20
+  lr: 0.0008
+  weight_decay: 0.0001
+  purchase_alpha: 2.0
+  temperature: 0.07
+  patience: 4
+  device: "auto"
+
+reranker:
+  candidate_k: 1000
+  retrieval_k: 900
+  popularity_k: 100
+  max_sessions_per_split_quick: 1000
+  max_sessions_per_split_full: 10000
+  batch_size: 16
+  epochs_quick: 2
+  epochs_full: 30
+  lr: 0.001
+  weight_decay: 0.0001
+  patience: 5
+  device: "auto"

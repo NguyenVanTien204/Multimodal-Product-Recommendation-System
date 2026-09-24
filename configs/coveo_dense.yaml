@@ -1,0 +1,54 @@
+project:
+  dataset: "Coveo SIGIR eCommerce 2021"
+  dataset_version: "coveo_dense_v1"
+  seed: 20260922
+
+paths:
+  local_raw_dir: "data/raw/coveo"
+  processed_dir: "data/processed/coveo_dense_v1"
+  embeddings_dir: "data/processed/coveo_dense_embeddings_v1"
+  retrieval_dir: "data/artifacts/coveo_dense_retrieval_v1"
+  reranker_dir: "data/artifacts/coveo_dense_reranker_v1"
+
+dense_slice:
+  window_days_min: 21
+  window_days_max: 28
+  target_events: 1200000
+  target_events_min: 1000000
+  target_events_max: 1500000
+  min_session_events: 3
+  max_session_events: 50
+  min_item_events: 5
+  # false avoids survivorship bias; add/purchase still affects window scoring and loss.
+  require_high_intent: false
+  include_search_clicks: true
+  train_time_ratio: 0.80
+  valid_time_ratio: 0.10
+  max_kcore_iterations: 50
+
+retrieval:
+  max_seq_len: 30
+  d_model: 96
+  n_heads: 4
+  n_layers: 2
+  dropout: 0.20
+  batch_size: 256
+  epochs: 20
+  lr: 0.0008
+  weight_decay: 0.0001
+  purchase_alpha: 2.0
+  temperature: 0.07
+  patience: 4
+  device: "auto"
+
+reranker:
+  candidate_k: 1000
+  retrieval_k: 900
+  popularity_k: 100
+  max_sessions_per_split: 10000
+  batch_size: 16
+  epochs: 30
+  lr: 0.001
+  weight_decay: 0.0001
+  patience: 5
+  device: "auto"

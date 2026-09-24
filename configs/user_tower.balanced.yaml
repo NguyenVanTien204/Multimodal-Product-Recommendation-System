@@ -1,0 +1,46 @@
+data:
+  items_path: data/processed/balanced_u5_i2_v1/items.parquet
+  train_path: data/processed/balanced_u5_i2_v1/train.parquet
+  valid_path: data/processed/balanced_u5_i2_v1/valid.parquet
+  test_path: data/processed/balanced_u5_i2_v1/test.parquet
+  artifacts_dir: data/artifacts/user_tower_balanced_v1
+
+model:
+  d_model: 128
+  n_heads: 4
+  n_layers: 2
+  d_ff: 512
+  dropout: 0.2
+  max_seq_len: 20
+
+train:
+  batch_size: 128
+  epochs: 30
+  lr: 0.0003
+  weight_decay: 0.0001
+  objective: sampled_softmax
+  num_negatives: 512
+  negative_sampling_power: 0.75
+  negative_uniform_ratio: 0.5
+  logq_correction: true
+  selection_metric: HitRate@1000
+  patience: 5
+  eval_every: 1
+  grad_clip_norm: 5.0
+  seed: 20260813
+  device: auto
+
+eval:
+  ks: [10, 50, 100, 500, 1000]
+  batch_size: 256
+  exclude_seen: true
+
+content:
+  enabled: [image, text]
+  sources:
+    - name: image
+      embeddings_path: data/embedding/image_embeddings.npy
+      metadata_path: data/embedding/image_embedding_metadata.parquet
+    - name: text
+      embeddings_path: data/embedding/text_embeddings.npy
+      metadata_path: data/embedding/text_embedding_metadata.parquet

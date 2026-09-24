@@ -1,0 +1,21 @@
+paths:
+  interactions:
+    - data/train.parquet
+    - data/valid.parquet
+    - data/test.parquet
+  items: data/items.parquet
+  output_dir: data/processed/balanced_u5_i2_v1
+
+dataset:
+  name: balanced_u5_i2_v1
+  seed: 20260813
+  min_user_positive_degree: 5
+  min_item_positive_degree: 2
+  positive_rating: 4.0
+  strong_negative_max_rating: 2.0
+  neutral_rating: 3.0
+  verified_only: true
+
+resources:
+  memory_limit: 2GB
+  threads: 2

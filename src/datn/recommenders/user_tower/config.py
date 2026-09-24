@@ -31,6 +31,11 @@ class TrainConfig:
     lr: float = 1e-3
     weight_decay: float = 0.0
     num_negatives: int = 1
+    objective: str = "bce"
+    negative_sampling_power: float = 0.75
+    negative_uniform_ratio: float = 0.0
+    logq_correction: bool = False
+    selection_metric: str | None = None
     patience: int = 20
     eval_every: int = 5
     grad_clip_norm: float = 5.0

@@ -80,7 +80,14 @@ class UserTower(nn.Module):
         )
         self.out_norm = nn.LayerNorm(d_model)
 
-    def embed_items(self, item_ids: Tensor) -> Tensor:
+    def get_item_table(self) -> Tensor:
+        """Project content once and return the complete shared item table."""
+        vecs = self.id_residual.weight
+        if self.has_content:
+            vecs = vecs + self.content_proj(self.content_matrix)
+        return vecs
+
+    def embed_items(self, item_ids: Tensor, item_table: Tensor | None = None) -> Tensor:
         """Content-aware item vectors e_i for an arbitrary-shaped index tensor.
 
         Single source of truth for the Item Tower: used for the sequence's input
@@ -88,12 +95,10 @@ class UserTower(nn.Module):
         and (via `item_vectors`) for full-catalog retrieval scoring -- so the item
         actually scored against is always exactly the item fed into the encoder.
         """
-        vecs = self.id_residual(item_ids)
-        if self.has_content:
-            vecs = vecs + self.content_proj(self.content_matrix[item_ids])
-        return vecs
+        table = self.get_item_table() if item_table is None else item_table
+        return table[item_ids]
 
-    def forward(self, item_seq: Tensor) -> Tensor:
+    def forward(self, item_seq: Tensor, item_table: Tensor | None = None) -> Tensor:
         """item_seq: (B, L) right-padded item indices -> hidden states (B, L, d_model).
 
         Right-padding (see dataset.pad_right) plus causal masking guarantees every
@@ -106,7 +111,7 @@ class UserTower(nn.Module):
         pad_mask = item_seq == PAD_IDX  # (B, L), True where padded
 
         positions = torch.arange(seq_len, device=item_seq.device).unsqueeze(0).expand(batch_size, -1)
-        hidden = self.embed_items(item_seq) * math.sqrt(self.d_model)
+        hidden = self.embed_items(item_seq, item_table) * math.sqrt(self.d_model)
         hidden = hidden + self.position_embedding(positions)
         hidden = self.embed_dropout(hidden)
 
@@ -119,15 +124,14 @@ class UserTower(nn.Module):
         hidden = self.encoder(hidden, mask=causal_mask, src_key_padding_mask=pad_mask)
         return self.out_norm(hidden)
 
-    def encode_user(self, item_seq: Tensor) -> Tensor:
+    def encode_user(self, item_seq: Tensor, item_table: Tensor | None = None) -> Tensor:
         """Return the User Tower query vector h_user: hidden state at each sequence's
         last non-pad position, shape (B, d_model)."""
-        hidden = self.forward(item_seq)
+        hidden = self.forward(item_seq, item_table)
         lengths = (item_seq != PAD_IDX).sum(dim=1).clamp(min=1)
         last_pos = lengths - 1  # sequences are right-padded, so the last valid index is len-1
         return hidden[torch.arange(hidden.size(0), device=hidden.device), last_pos]
 
     def item_vectors(self) -> Tensor:
         """Full Item Tower matrix e_i, one row per catalog index (row 0 is the PAD sentinel)."""
-        all_ids = torch.arange(self.id_residual.num_embeddings, device=self.id_residual.weight.device)
-        return self.embed_items(all_ids)
+        return self.get_item_table()

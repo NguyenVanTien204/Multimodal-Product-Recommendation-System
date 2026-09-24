@@ -1,0 +1,46 @@
+# H&M Personalized Fashion Recommendations — independent Kaggle profile.
+# This configuration never changes the existing Amazon/Coveo artifacts.
+project:
+  dataset: "H&M Personalized Fashion Recommendations"
+  dataset_version: "hm_v1"
+  profile: "quick"       # quick: Kaggle smoke; full: thesis-scale sample
+  seed: 20260922
+
+paths:
+  working_dir: "/kaggle/working/hm_v1"
+
+sampling:
+  # Customers are selected only from purchases before validation, stratified by
+  # historical activity. Their later events remain untouched for evaluation.
+  quick_customers: 50000
+  full_customers: 300000
+  min_train_events: 3
+  max_events_per_customer: 100
+
+embeddings:
+  model: "jinaai/jina-clip-v2"
+  dim: 512                # Matryoshka truncation dimension
+  text_batch_size: 64
+  image_batch_size: 32
+  max_images_quick: 60000
+  max_images_full: null    # encode every available image
+
+retrieval:
+  max_seq_len: 30
+  d_model: 128
+  batch_size: 512
+  epochs_quick: 3
+  epochs_full: 12
+  negatives: 128
+  lr: 0.001
+  candidate_k: 300
+
+reranker:
+  candidate_k: 500
+  retrieval_k: 300
+  popularity_k: 100
+  content_k: 100
+  epochs_quick: 4
+  epochs_full: 15
+  batch_size: 64
+  lr: 0.001

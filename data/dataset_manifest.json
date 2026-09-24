@@ -1,27 +1,27 @@
 {
   "source": "Amazon Reviews 2023 / Clothing_Shoes_and_Jewelry",
-  "method": "two-pass streamed stable-hash user pool; activity strata; full histories; iterative k-core; chronological leave-last-out",
+  "strategy": "Dense Enrichment on Fixed 152k Catalog (Relaxed helpful_votes)",
   "seed": "20260813",
-  "target_users": 30000,
-  "target_interactions": 350000,
+  "target_users": 35000,
+  "target_interactions": 400000,
   "counts": [
     {
+      "split": "test",
+      "n_rows": 34187,
+      "users": 34187,
+      "items": 19037
+    },
+    {
       "split": "train",
-      "rows": 171788,
-      "users": 29096,
-      "items": 122378
+      "n_rows": 269816,
+      "users": 34187,
+      "items": 65828
     },
     {
       "split": "valid",
-      "rows": 29096,
-      "users": 29096,
-      "items": 25503
-    },
-    {
-      "split": "test",
-      "rows": 29096,
-      "users": 29096,
-      "items": 24537
+      "n_rows": 34187,
+      "users": 34187,
+      "items": 19456
     }
   ]
 }

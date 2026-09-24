@@ -35,7 +35,9 @@ def load_content_matrix(vocab: ItemVocab, sources: list[ContentSource]) -> np.nd
 
     blocks: list[np.ndarray] = []
     for source in sources:
-        vectors = np.load(source.embeddings_path)
+        # The balanced catalog uses only a subset of the 152k source embeddings.
+        # Memory mapping avoids loading both full 600+ MiB arrays into RAM.
+        vectors = np.load(source.embeddings_path, mmap_mode="r")
         item_ids = pl.read_parquet(source.metadata_path, columns=["item_id"])["item_id"].to_list()
         if len(item_ids) != vectors.shape[0]:
             raise ValueError(

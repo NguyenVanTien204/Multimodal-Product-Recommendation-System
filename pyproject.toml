@@ -18,11 +18,14 @@ dependencies = [
 dev = ["pytest>=8,<9"]
 vectordb = ["qdrant-client>=1.12,<1.13", "numpy>=1.26,<3"]
 recommenders = ["torch>=2.2,<3", "numpy>=1.26,<3"]
+coveo = ["torch>=2.2,<3", "numpy>=1.26,<3", "jupyter>=1.0,<2", "matplotlib>=3.8,<4"]
 
 [project.scripts]
 datn-data = "datn.data.cli:main"
+datn-balanced-data = "datn.data.balanced_cli:main"
 datn-vectordb = "datn.vectordb.cli:main"
 datn-user-tower = "datn.recommenders.user_tower.cli:main"
+datn-checkpoint = "datn.experiments.checkpoint:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/datn"]

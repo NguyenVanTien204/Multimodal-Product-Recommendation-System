@@ -10,6 +10,7 @@ Thư mục này lưu trữ các biên bản kiểm chứng kỹ thuật, nhật 
 | 2 | 14/09/2026 | [`2026-09-14_user_tower_p1_difficulty_and_popularity_bias.md`](./2026-09-14_user_tower_p1_difficulty_and_popularity_bias.md) | Phản biện P1: Kiểm chứng Độ khó bài toán (Sparsity 99.995%, 82% singleton items), Đánh giá Popularity Baseline vs User Tower, Phân tích Overlap (Disjoint Head vs Tail), Kiểm chứng Popularity Bias. | **ĐÃ HOÀN THÀNH** |
 | 3 | 14/09/2026 | [`2026-09-14_item_degree_sparsity_root_cause.md`](./2026-09-14_item_degree_sparsity_root_cause.md) | Phản biện Nguồn gốc Dữ liệu: Phân tích nguyên nhân 80% sản phẩm chỉ có 1 tương tác (Bẻ gãy đồ thị do User-Hash 1/32, bộ lọc helpful_vote >= 3, và chủ đích tắt MIN_ITEM_DEGREE=1). | **ĐÃ HOÀN THÀNH** |
 | 4 | 14/09/2026 | [`2026-09-14_dataset_sparsity_critique_and_defense.md`](./2026-09-14_dataset_sparsity_critique_and_defense.md) | Đánh giá Rủi ro & Chiến lược Phản biện: Tính thực tế của dữ liệu siêu thưa, giải trình trước Hội đồng về sự đánh đổi RAG vs CF, và bộ kịch bản bảo vệ luận văn (Defense Playbook). | **ĐÃ HOÀN THÀNH** |
+| 5 | 14/09/2026 | [`2026-09-14_enriched_dataset_user_tower_results.md`](./2026-09-14_enriched_dataset_user_tower_results.md) | Báo cáo Đánh giá Toàn diện: Kết quả Thực nghiệm User Tower trên Dữ liệu Làm giàu (26.428 Users, 152k Catalog), So sánh Tăng trưởng vs Dữ liệu Cũ, Phân tích Overlap Trực giao với Popularity Baseline. | **ĐÃ HOÀN THÀNH** |
 
 ---
 

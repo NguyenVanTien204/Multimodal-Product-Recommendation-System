@@ -9,7 +9,12 @@ from datn.recommenders.user_tower.config import UserTowerConfig
 from datn.recommenders.user_tower.dataset import EvalExample, ItemVocab, PAD_IDX
 from datn.recommenders.user_tower.evaluate import full_ranking_evaluate
 from datn.recommenders.user_tower.model import UserTower
-from datn.recommenders.user_tower.train import _step_loss
+from datn.recommenders.user_tower.train import (
+    _sample_valid_negatives,
+    _sampled_softmax_step_loss,
+    _step_loss,
+    build_negative_sampling_distribution,
+)
 
 
 def test_user_tower_forward_and_embedding():
@@ -61,6 +66,43 @@ def test_step_loss_with_multi_negatives():
     loss = _step_loss(model, input_seq, target_seq, cum_probs, num_negatives=4, bce=bce)
     assert loss.dim() == 0
     assert not torch.isnan(loss)
+    assert loss.item() > 0
+
+
+def test_logq_corrected_sampled_softmax_rejects_known_positives():
+    torch.manual_seed(7)
+    vocab_size = 30
+    model = UserTower(vocab_size=vocab_size, max_seq_len=4, d_model=32, n_heads=2)
+    sequences = {"u1": [1, 2, 3, 4], "u2": [5, 6, 7, 8]}
+    probs, cum_probs = build_negative_sampling_distribution(
+        sequences,
+        num_items=vocab_size - 1,
+        device=torch.device("cpu"),
+        power=0.75,
+        uniform_ratio=0.5,
+    )
+    assert torch.isclose(probs.sum(), torch.tensor(1.0))
+
+    input_seq = torch.tensor([[1, 2, 0, 0], [5, 6, 7, 0]])
+    target_seq = torch.tensor([[2, 3, 0, 0], [6, 7, 8, 0]])
+    negatives = _sample_valid_negatives(cum_probs, input_seq, target_seq, num_negatives=16)
+    for row in range(input_seq.size(0)):
+        known = set(input_seq[row].tolist()) | set(target_seq[row].tolist())
+        known.discard(PAD_IDX)
+        sampled = set(negatives[row][target_seq[row] != PAD_IDX].flatten().tolist())
+        assert known.isdisjoint(sampled)
+
+    loss = _sampled_softmax_step_loss(
+        model,
+        input_seq,
+        target_seq,
+        probs,
+        cum_probs,
+        num_negatives=16,
+        logq_correction=True,
+    )
+    assert loss.dim() == 0
+    assert torch.isfinite(loss)
     assert loss.item() > 0
 
 

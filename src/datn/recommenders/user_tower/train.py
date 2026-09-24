@@ -4,6 +4,7 @@ import json
 import logging
 import random
 import time
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -64,10 +65,66 @@ def build_negative_sampler(
     return torch.tensor(cum_probs, dtype=torch.float32, device=device)
 
 
+def build_negative_sampling_distribution(
+    sequences_train: dict[str, list[int]],
+    num_items: int,
+    device: torch.device,
+    power: float = 0.75,
+    uniform_ratio: float = 0.0,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return exact item probabilities and their CDF for mixed sampling."""
+    if not 0.0 <= uniform_ratio <= 1.0:
+        raise ValueError("negative_uniform_ratio must be between 0 and 1")
+    freq = np.ones(num_items + 1, dtype=np.float64)
+    freq[0] = 0.0
+    for seq in sequences_train.values():
+        for item in seq:
+            freq[item] += 1.0
+    popularity = np.power(freq, power)
+    popularity[0] = 0.0
+    popularity /= popularity.sum()
+    uniform = np.zeros(num_items + 1, dtype=np.float64)
+    uniform[1:] = 1.0 / num_items
+    probs = uniform_ratio * uniform + (1.0 - uniform_ratio) * popularity
+    probs[0] = 0.0
+    probs /= probs.sum()
+    cum_probs = np.cumsum(probs)
+    cum_probs[-1] = 1.0
+    return (
+        torch.tensor(probs, dtype=torch.float32, device=device),
+        torch.tensor(cum_probs, dtype=torch.float32, device=device),
+    )
+
+
 def _sample_negatives(cum_probs: torch.Tensor, shape: tuple[int, ...]) -> torch.Tensor:
     draws = torch.rand(shape, device=cum_probs.device)
     idx = torch.searchsorted(cum_probs, draws)
     return idx.clamp(min=1, max=cum_probs.numel() - 1)
+
+
+def _sample_valid_negatives(
+    cum_probs: torch.Tensor,
+    input_seq: torch.Tensor,
+    target_seq: torch.Tensor,
+    num_negatives: int,
+) -> torch.Tensor:
+    """Sample negatives while rejecting every known positive for that user."""
+    neg_ids = _sample_negatives(cum_probs, (*target_seq.shape, num_negatives))
+    known = torch.cat((input_seq, target_seq), dim=1)
+    valid_position = target_seq.ne(PAD_IDX).unsqueeze(-1)
+    invalid = torch.zeros_like(neg_ids, dtype=torch.bool)
+    for _ in range(12):
+        invalid.zero_()
+        for column in range(known.size(1)):
+            known_id = known[:, column]
+            active = known_id.ne(PAD_IDX)
+            if active.any():
+                invalid |= neg_ids.eq(known_id[:, None, None]) & active[:, None, None]
+        invalid &= valid_position
+        if not invalid.any():
+            return neg_ids
+        neg_ids[invalid] = _sample_negatives(cum_probs, (int(invalid.sum()),))
+    raise RuntimeError("Could not sample valid negatives after 12 rejection rounds")
 
 
 def _step_loss(
@@ -78,20 +135,50 @@ def _step_loss(
     num_negatives: int,
     bce: nn.BCEWithLogitsLoss,
 ) -> torch.Tensor:
-    hidden = model(input_seq)  # (B, L, d)
+    item_table = model.get_item_table()
+    hidden = model(input_seq, item_table)  # (B, L, d)
     loss_mask = target_seq != PAD_IDX  # (B, L)
 
-    pos_emb = model.embed_items(target_seq)  # (B, L, d)
+    pos_emb = model.embed_items(target_seq, item_table)  # (B, L, d)
     pos_logits = (hidden * pos_emb).sum(-1)  # (B, L)
     pos_loss = bce(pos_logits, torch.ones_like(pos_logits)) * loss_mask
 
     neg_ids = _sample_negatives(cum_probs, (*target_seq.shape, num_negatives))  # (B, L, K)
-    neg_emb = model.embed_items(neg_ids)  # (B, L, K, d)
+    neg_emb = model.embed_items(neg_ids, item_table)  # (B, L, K, d)
     neg_logits = (hidden.unsqueeze(2) * neg_emb).sum(-1)  # (B, L, K)
     neg_loss = bce(neg_logits, torch.zeros_like(neg_logits)) * loss_mask.unsqueeze(-1)
 
     denom = loss_mask.sum().clamp(min=1)
     return pos_loss.sum() / denom + neg_loss.sum() / (denom * num_negatives)
+
+
+def _sampled_softmax_step_loss(
+    model: UserTower,
+    input_seq: torch.Tensor,
+    target_seq: torch.Tensor,
+    sampling_probs: torch.Tensor,
+    cum_probs: torch.Tensor,
+    num_negatives: int,
+    logq_correction: bool,
+) -> torch.Tensor:
+    """Listwise sampled softmax aligned with full-catalog retrieval."""
+    item_table = model.get_item_table()
+    hidden = model(input_seq, item_table)
+    loss_mask = target_seq.ne(PAD_IDX)
+    pos_logits = (hidden * model.embed_items(target_seq, item_table)).sum(-1)
+
+    neg_ids = _sample_valid_negatives(cum_probs, input_seq, target_seq, num_negatives)
+    neg_logits = (hidden.unsqueeze(2) * model.embed_items(neg_ids, item_table)).sum(-1)
+
+    if logq_correction:
+        expected_pos = (num_negatives * sampling_probs[target_seq]).clamp_min(1e-12)
+        expected_neg = (num_negatives * sampling_probs[neg_ids]).clamp_min(1e-12)
+        pos_logits = pos_logits - expected_pos.log()
+        neg_logits = neg_logits - expected_neg.log()
+
+    logits = torch.cat((pos_logits.unsqueeze(-1), neg_logits), dim=-1)
+    labels = torch.zeros(int(loss_mask.sum()), dtype=torch.long, device=logits.device)
+    return torch.nn.functional.cross_entropy(logits[loss_mask], labels)
 
 
 def train(config: UserTowerConfig) -> dict[str, float]:
@@ -147,15 +234,27 @@ def train(config: UserTowerConfig) -> dict[str, float]:
         optimizer, T_max=config.train.epochs, eta_min=1e-5
     )
     bce = nn.BCEWithLogitsLoss(reduction="none")
-    cum_probs = build_negative_sampler(sequences.train, vocab.num_items, device)
+    sampling_probs, cum_probs = build_negative_sampling_distribution(
+        sequences.train,
+        vocab.num_items,
+        device,
+        power=config.train.negative_sampling_power,
+        uniform_ratio=config.train.negative_uniform_ratio,
+    )
+    if config.train.objective not in {"bce", "sampled_softmax"}:
+        raise ValueError(f"Unknown training objective: {config.train.objective}")
 
     artifacts_dir = Path(config.data.artifacts_dir)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
+    (artifacts_dir / "training_config.json").write_text(
+        json.dumps(asdict(config), indent=2, default=str), encoding="utf-8"
+    )
 
-    best_ndcg = -1.0
+    best_selection_value = -1.0
     best_metrics: dict[str, float] = {}
     epochs_without_improvement = 0
     primary_k = config.eval.ks[0]
+    selection_metric = config.train.selection_metric or f"NDCG@{primary_k}"
 
     for epoch in range(1, config.train.epochs + 1):
         model.train()
@@ -164,9 +263,20 @@ def train(config: UserTowerConfig) -> dict[str, float]:
         for input_seq, target_seq in train_loader:
             input_seq = input_seq.to(device)
             target_seq = target_seq.to(device)
-            loss = _step_loss(
-                model, input_seq, target_seq, cum_probs, config.train.num_negatives, bce
-            )
+            if config.train.objective == "sampled_softmax":
+                loss = _sampled_softmax_step_loss(
+                    model,
+                    input_seq,
+                    target_seq,
+                    sampling_probs,
+                    cum_probs,
+                    config.train.num_negatives,
+                    config.train.logq_correction,
+                )
+            else:
+                loss = _step_loss(
+                    model, input_seq, target_seq, cum_probs, config.train.num_negatives, bce
+                )
             optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), config.train.grad_clip_norm)
@@ -195,9 +305,13 @@ def train(config: UserTowerConfig) -> dict[str, float]:
         )
         logger.info("epoch=%d valid=%s", epoch, metrics)
 
-        ndcg = metrics[f"NDCG@{primary_k}"]
-        if ndcg > best_ndcg:
-            best_ndcg = ndcg
+        selected_value = metrics.get(selection_metric)
+        if selected_value is None:
+            raise KeyError(
+                f"selection_metric={selection_metric!r} is absent from validation metrics"
+            )
+        if selected_value > best_selection_value:
+            best_selection_value = selected_value
             best_metrics = metrics
             epochs_without_improvement = 0
             torch.save(model.state_dict(), artifacts_dir / "user_tower.pt")
@@ -211,7 +325,12 @@ def train(config: UserTowerConfig) -> dict[str, float]:
             epochs_without_improvement += config.train.eval_every
 
         if epochs_without_improvement >= config.train.patience:
-            logger.info("Early stopping at epoch=%d (best NDCG@%d=%.4f)", epoch, primary_k, best_ndcg)
+            logger.info(
+                "Early stopping at epoch=%d (best %s=%.4f)",
+                epoch,
+                selection_metric,
+                best_selection_value,
+            )
             break
 
     return best_metrics
