@@ -75,7 +75,7 @@ Người dùng: văn bản / ảnh / lịch sử
 - Trích xuất và cache image/text embeddings.
 - Xây dựng và đánh giá các biến thể content-only và multimodal fusion.
 - Thực hiện ablation và đánh giá sản phẩm ít tương tác.
-- Xây dựng demo end-to-end tối thiểu bằng FastAPI và Streamlit.
+- Xây dựng demo end-to-end bằng FastAPI và Next.js + Tailwind CSS.
 
 ### Mục tiêu mở rộng
 
@@ -112,4 +112,3 @@ Conversational recommendation, RAG, agent và explanation là các system extens
 - Có demo cho thấy kết quả Top-K có thể được kế thừa bởi conversational refinement, RAG explanation/comparison và agent.
 
 Thành công không được định nghĩa là multimodal bắt buộc phải thắng tất cả baseline.
-

@@ -255,7 +255,7 @@ Agent chỉ chọn công cụ và tổng hợp câu trả lời; không tự t�
 | `POST /compare` | So sánh các sản phẩm bằng evidence |
 | `POST /chat` | Giao diện hội thoại điều phối các chức năng |
 
-Backend dùng FastAPI; MVP frontend dùng Streamlit. React/Next.js chỉ là nâng cấp tùy chọn sau khi research core ổn định.
+Backend dùng FastAPI; frontend chốt dùng Next.js (App Router, TypeScript) và Tailwind CSS. Frontend chỉ là presentation layer, không truy cập trực tiếp artifact model/index.
 
 ## 12. Công nghệ
 
@@ -272,7 +272,7 @@ Backend dùng FastAPI; MVP frontend dùng Streamlit. React/Next.js chỉ là nâ
 | Vector search | FAISS |
 | RAG | Custom lightweight pipeline |
 | Agent | Single tool-calling agent |
-| API / Demo | FastAPI / Streamlit |
+| API / Demo | FastAPI / Next.js + Tailwind CSS |
 | Results | CSV/JSON + plots |
 | Version control | Git |
 
@@ -290,4 +290,3 @@ project/
 ├── tests/
 └── configs/
 ```
-

@@ -120,7 +120,7 @@ Exit criteria: trả lời được RQ1–RQ3 bằng kết quả thực nghiệm
 - Bọc các chức năng thành tool rõ input/output.
 - Tạo một agent điều phối recommend/search/refine/explain/compare.
 - Thêm timeout, fallback và validation tool result.
-- Tích hợp FastAPI và Streamlit thành demo end-to-end.
+- Tích hợp FastAPI và Next.js + Tailwind CSS thành demo end-to-end.
 
 ### Tuần 10 — Hoàn thiện
 
@@ -165,4 +165,3 @@ Exit criteria: trả lời được RQ1–RQ3 bằng kết quả thực nghiệm
 - RQ1–RQ3 có kết luận dựa trên số liệu và phân tích sai số.
 - API/demo thể hiện ít nhất recommend, refine, explain và compare; agent là tùy chọn cuối.
 - Mã nguồn, config, artifact và hướng dẫn chạy đủ để tái lập kết quả chính.
-

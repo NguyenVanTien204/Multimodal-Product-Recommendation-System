@@ -12,7 +12,7 @@ Hệ thống được thiết kế theo mô hình phân lớp rõ ràng, đảm 
 graph TD
     %% Client Layer
     subgraph Client ["Lớp Giao diện (Client Layer)"]
-        UI["Streamlit Frontend (Giao diện Hội thoại & Tìm kiếm Đa phương thức)"]
+        UI["Next.js + Tailwind CSS Frontend (Giao diện Hội thoại & Tìm kiếm Đa phương thức)"]
     end
 
     %% API Layer
@@ -125,7 +125,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
         *   `POST /explain`
         *   `POST /compare`
         *   `POST /chat`
-    *   Sử dụng **Streamlit** để phát triển MVP Frontend để demo trọn vẹn luồng tương tác đa phương thức (upload ảnh tìm kiếm, chat nhận gợi ý và xem giải thích).
+    *   Sử dụng **Next.js (App Router, TypeScript) + Tailwind CSS** để phát triển frontend demo; FastAPI giữ toàn bộ logic nghiệp vụ, retrieval và RAG.
 
 ### Trụ cột 6: Thử nghiệm & Đánh giá (System Evaluation)
 *   **Tiêu chuẩn:** Toàn bộ hệ thống phải được đánh giá định lượng bằng các độ đo học thuật chuẩn.
@@ -150,7 +150,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
         *   `src/datn/retrieval/`: FAISS index và truy xuất hybrid.
         *   `src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
         *   `src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
-        *   `src/datn/api/`: Các FastAPI routes.
+        *   `backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
         *   `src/datn/evaluation/`: Code tính toán metrics và chạy ablation test.
 3.  **Quy trình Commit & Thử nghiệm:**
     *   Không được sửa đổi dữ liệu đã đóng băng trong `data/processed/` mà không cập nhật `dataset_manifest.json` và tạo một phiên bản dataset mới.

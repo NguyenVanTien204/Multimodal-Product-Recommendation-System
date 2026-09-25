@@ -21,7 +21,7 @@ gantt
     section RAG & Tương tác
     Pha 4: Bộ máy RAG & Hội thoại (Conversational)   : p4, after p3, 14d
     section Đóng gói & Giao diện
-    Pha 5: API FastAPI & Streamlit Frontend Wrapper: p5, after p4, 14d
+    Pha 5: API FastAPI & Next.js Frontend Wrapper: p5, after p4, 14d
     section Đánh giá & Tối ưu
     Pha 6: Đánh giá Hệ thống & Viết Luận văn        : p6, after p5, 14d
 ```
@@ -97,7 +97,7 @@ Xây dựng cấu phần cốt lõi của RAG: Truy xuất thông tin bổ trợ
 
 ---
 
-### ⚪ Pha 5: Đóng gói API FastAPI & Xây dựng Giao diện Streamlit (Wrapper System)
+### ⚪ Pha 5: Đóng gói API FastAPI & Xây dựng Giao diện Next.js (Wrapper System)
 *Trạng thái: Chưa thực hiện (PLANNED)*
 
 Đóng gói các mô hình toán học và logic RAG thành một **Hệ thống phần mềm** chạy thực tế, cho phép người dùng cuối tương tác.
@@ -110,13 +110,13 @@ Xây dựng cấu phần cốt lõi của RAG: Truy xuất thông tin bổ trợ
         *   `POST /explain` (Giải thích tại sao gợi ý sản phẩm này dựa trên RAG).
         *   `POST /compare` (So sánh ưu nhược điểm của 2 sản phẩm dựa trên nhận xét của người mua).
         *   `POST /chat` (Endpoint chính cho Agent đối thoại).
-    *   [ ] Xây dựng Frontend giao diện bằng **Streamlit** (hoặc React/Next.js nếu thời gian cho phép):
+    *   [ ] Xây dựng Frontend giao diện bằng **Next.js (App Router, TypeScript) + Tailwind CSS**:
         *   Tải ảnh lên trực quan $\rightarrow$ gọi API tìm kiếm.
         *   Cửa sổ chat tương tác với Chatbot RAG.
         *   Giao diện hiển thị thẻ sản phẩm (Product Cards) kèm hình ảnh, giá, thương hiệu và nút "Giải thích/So sánh".
 *   **Kết quả kỳ vọng:**
     *   Backend API chạy ngầm trên cổng mặc định (ví dụ: `http://localhost:8000`).
-    *   Ứng dụng Streamlit chạy trực quan trên trình duyệt cho phép người dùng click và chat.
+    *   Ứng dụng Next.js chạy trực quan trên trình duyệt cho phép người dùng click và chat.
 
 ---
 
