@@ -138,14 +138,27 @@ export function Navbar({ onOpenAuth }: { onOpenAuth: () => void }) {
           {/* AUTH BUTTON / USER MENU */}
           {user ? (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-              <div className="hidden sm:flex flex-col text-right">
+              <Link
+                href="/account"
+                title="Tài khoản của tôi"
+                className={`hidden sm:flex flex-col text-right px-2 py-1 rounded-lg transition-colors ${
+                  pathname === "/account" ? "bg-slate-100" : "hover:bg-slate-100"
+                }`}
+              >
                 <span className="text-xs font-bold text-slate-900 leading-tight">
                   {user.full_name}
                 </span>
                 <span className="text-[10px] text-emerald-600 font-semibold">
                   {user.is_admin ? "Quản Trị Viên" : "Thành viên"}
                 </span>
-              </div>
+              </Link>
+              <Link
+                href="/account"
+                title="Tài khoản của tôi"
+                className="sm:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 text-slate-700 transition-colors"
+              >
+                <UserIcon className="w-4 h-4" />
+              </Link>
               <button
                 onClick={logout}
                 title="Đăng xuất"

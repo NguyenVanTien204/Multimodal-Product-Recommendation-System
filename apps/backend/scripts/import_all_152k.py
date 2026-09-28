@@ -20,10 +20,13 @@ if parent_dir not in sys.path:
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-from app.database import Base, SessionLocal, engine
-from app.models import Category, Product, User, Cart, CartItem, Order, OrderItem
-from app.security import hash_password
-from app.config import settings
+from app.core.database import Base, SessionLocal, engine
+from app.core.security import hash_password
+from app.core.config import settings
+from app.auth.models import User
+from app.catalog.models import Category, Product
+from app.cart.models import Cart, CartItem
+from app.orders.models import Order, OrderItem
 
 def main():
     print("=" * 70)

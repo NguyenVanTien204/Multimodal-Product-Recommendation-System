@@ -5,10 +5,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import select
-from app.database import Base, SessionLocal, engine
-from app.models import Category, Product, User
-from app.security import hash_password
-from app.services import PRODUCT_COLLECTION, upsert_product_vector, qdrant_health
+from app.core.database import Base, SessionLocal, engine
+from app.core.security import hash_password
+from app.auth.models import User
+from app.catalog.models import Category, Product
+from app.recommendations.service import PRODUCT_COLLECTION, upsert_product_vector, qdrant_health
 
 def seed():
     print("Creating tables in database...")

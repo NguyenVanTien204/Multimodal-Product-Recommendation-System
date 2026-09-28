@@ -2,9 +2,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import settings
-from .database import Base, engine
-from .routers import auth_router, cart_router, catalog_router, order_router, recommendation_router
+from .auth.router import router as auth_router
+from .cart.router import router as cart_router
+from .catalog.router import router as catalog_router
+from .core.config import settings
+from .core.database import Base, engine
+from .orders.router import router as order_router
+from .recommendations.router import router as recommendation_router
 
 
 @asynccontextmanager

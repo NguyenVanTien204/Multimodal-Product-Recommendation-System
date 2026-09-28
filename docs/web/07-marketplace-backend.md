@@ -9,20 +9,30 @@ flowchart LR
   Next[Next.js frontend] --> Market[Marketplace FastAPI :8000]
   Market --> PG[(PostgreSQL)]
   Market --> Q[(Qdrant)]
-  Market -->|HTTP gateway| Rec[Amazon recommender service]
-  Rec --> Train[src/datn — training artifacts]
+  Market -->|HTTP gateway, SKU<->product_id| Rec[Recommender FastAPI :8100]
+  Rec --> Train[src/datn/recommenders — User Tower + reranker checkpoints]
 ```
 
 ## Bounded contexts
 
 | Context | PostgreSQL | Endpoint chính |
 |---|---|---|
-| Identity | `users` | register, login, me |
+| Identity | `users` | register, login, me, update profile, change password |
 | Catalog | `categories`, `products` | list/detail, admin create |
 | Cart | `carts`, `cart_items` | add/remove/view |
 | Order | `orders`, `order_items` | checkout, history |
 | Similarity | Qdrant `product_embeddings` | vector upsert, similar products |
-| Recommendation | Không lưu artifact tại marketplace | gateway sang service tuần tự Amazon |
+| Recommendation | Không lưu artifact tại marketplace | gateway sang `apps/recommender/` (retrieval+reranking), fallback Qdrant rồi catalog popularity |
+
+`apps/recommender/` (không thuộc marketplace) là service FastAPI riêng nạp
+checkpoint User Tower (`data/artifacts/user_tower_balanced_v1/`) và reranker
+(`data/artifacts/reranker_v2/`) trực tiếp từ đĩa — đây là service duy nhất
+được phép import `src/datn`. Nó nhận diện sản phẩm qua SKU (ASIN), không biết
+gì về `Product.id` của Postgres; marketplace dịch hai chiều `Product.id <->
+Product.sku` quanh mỗi lần gọi. Khi service này không phản hồi (hoặc lịch sử
+người dùng toàn item ngoài tập huấn luyện), marketplace rơi về Qdrant (vector
+nội dung CLIP thật đã index qua `scripts/index_qdrant_vectors.py`), rồi cuối
+cùng là top sản phẩm đa dạng theo danh mục.
 
 Checkout dùng row lock PostgreSQL để xác nhận tồn kho, giảm stock và snapshot giá
 trong cùng transaction. Nó chỉ tạo order `PENDING`; payment provider là phần ngoài
