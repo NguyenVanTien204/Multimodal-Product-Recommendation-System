@@ -1,4 +1,9 @@
+import os
 import random
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from sqlalchemy import select
 from app.database import Base, SessionLocal, engine
 from app.models import Category, Product, User

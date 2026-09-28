@@ -6,7 +6,7 @@
 |---|---|---|
 | Frontend | Next.js App Router, React, TypeScript strict, Tailwind CSS | UI responsive, interaction state, accessibility, render card/chat/compare |
 | BFF nhẹ | Next.js Route Handlers | Same-origin proxy, chuẩn hóa lỗi UI, không thực hiện ranking hay gọi LLM trực tiếp |
-| Backend | `backend/app/` — FastAPI + Pydantic + SQLAlchemy | Marketplace API, auth, catalog, cart, orders, gateway và health |
+| Backend | `apps/backend/app/` — FastAPI + Pydantic + SQLAlchemy | Marketplace API, auth, catalog, cart, orders, gateway và health |
 | AI core | Recommender, retrieval, RAG, single agent | Theo ràng buộc nghiên cứu; backend mới là caller |
 | Data | Parquet/DuckDB, FAISS, artifact checkpoint | Chỉ AI core/backend đọc |
 
@@ -40,7 +40,7 @@ flowchart LR
 ## 3. Cấu trúc thư mục frontend đề xuất
 
 ```text
-web/
+apps/web/
 ├── app/
 │   ├── page.tsx                 # storefront/home
 │   ├── assistant/page.tsx       # chat shopping assistant
@@ -62,7 +62,7 @@ web/
 └── tsconfig.json
 ```
 
-Backend độc lập nằm tại `backend/`, có `backend/docker-compose.yml` chạy PostgreSQL và Qdrant. Không đưa mã marketplace vào `src/datn/` vì thư mục đó dành cho ETL/train/evaluation.
+Backend độc lập nằm tại `apps/backend/`, có `apps/backend/docker-compose.yml` chạy PostgreSQL và Qdrant. Không đưa mã marketplace vào `src/datn/` vì thư mục đó dành cho ETL/train/evaluation.
 
 Server Components dùng cho layout/nội dung tĩnh; Client Components chỉ dùng ở search/filter, compare selection và chat. Không đưa session secret hay model metadata nhạy cảm vào client bundle.
 

@@ -29,7 +29,7 @@ def index_vectors():
         vectors_config=VectorParams(size=1024, distance=Distance.COSINE, on_disk=True),
     )
 
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     npy_path = os.path.join(project_root, "data", "embedding", "text_embeddings.npy")
     parquet_path = os.path.join(project_root, "data", "items.parquet")
 

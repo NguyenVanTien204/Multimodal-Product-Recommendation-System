@@ -15,8 +15,8 @@ Chúng bổ sung cho đặc tả nghiệp vụ tổng thể tại [04-business-r
 
 ## Quyết định nền tảng
 
-- Frontend chốt: **Next.js (App Router, TypeScript) + Tailwind CSS** trong `web/`.
-- Backend đích: FastAPI trong `src/datn/api/`.
+- Frontend chốt: **Next.js (App Router, TypeScript) + Tailwind CSS** trong `apps/web/`.
+- Backend đích: FastAPI trong `apps/backend/app/`.
 - Khi chưa có artifact model/index: frontend dùng fixture catalog cục bộ, được gắn nhãn **Demo data**; không mô phỏng số liệu đánh giá mô hình.
 - Khi API sẵn sàng: Next.js route handler chuyển tiếp request tới FastAPI qua `DATN_API_BASE_URL`; browser không truy cập checkpoint, Parquet hay index.
 

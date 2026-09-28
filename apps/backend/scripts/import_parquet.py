@@ -71,7 +71,7 @@ def main():
     Base.metadata.create_all(bind=engine)
 
     # Paths
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     items_parquet = os.path.join(project_root, "data", "items.parquet")
     interactions_parquet = os.path.join(project_root, "data", "candidate_interactions.parquet")
     text_embeddings_npy = os.path.join(project_root, "data", "embedding", "text_embeddings.npy")

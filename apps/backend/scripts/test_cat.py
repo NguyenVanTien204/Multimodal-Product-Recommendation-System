@@ -1,8 +1,10 @@
+import os
 import time
 import pandas as pd
 
 t0 = time.time()
-df = pd.read_parquet("../data/items.parquet")
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+df = pd.read_parquet(os.path.join(project_root, "data", "items.parquet"))
 
 text_combined = (df["title"].fillna("") + " " + df["category"].fillna("")).str.lower()
 

@@ -1,6 +1,6 @@
 # Backend mini marketplace
 
-Backend đặt riêng tại `backend/`, tách khỏi `src/datn/` để không ảnh hưởng ETL,
+Backend đặt riêng tại `apps/backend/`, tách khỏi `src/datn/` để không ảnh hưởng ETL,
 huấn luyện hoặc checkpoint model. Công nghệ: FastAPI, SQLAlchemy, PostgreSQL,
 Qdrant và Docker Compose.
 

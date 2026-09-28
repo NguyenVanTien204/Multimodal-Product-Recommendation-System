@@ -33,7 +33,7 @@ def main():
     # 1. Database tables check
     Base.metadata.create_all(bind=engine)
 
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     items_parquet = os.path.join(project_root, "data", "items.parquet")
     text_embeddings_npy = os.path.join(project_root, "data", "embedding", "text_embeddings.npy")
 

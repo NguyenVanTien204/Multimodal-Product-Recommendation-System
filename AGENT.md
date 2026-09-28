@@ -150,7 +150,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
         *   `src/datn/retrieval/`: FAISS index và truy xuất hybrid.
         *   `src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
         *   `src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
-        *   `backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
+        *   `apps/backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
         *   `src/datn/evaluation/`: Code tính toán metrics và chạy ablation test.
 3.  **Quy trình Commit & Thử nghiệm:**
     *   Không được sửa đổi dữ liệu đã đóng băng trong `data/processed/` mà không cập nhật `dataset_manifest.json` và tạo một phiên bản dataset mới.
