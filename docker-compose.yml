@@ -1,23 +1,153 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: datn-postgres
+    restart: unless-stopped
+    # Keep the always-on development stack small. Override in .env only when
+    # working with a larger production-like dataset.
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-512m}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mini_market}
+      POSTGRES_USER: ${POSTGRES_USER:-mini_market}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mini_market_secret_pass_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   qdrant:
     image: qdrant/qdrant:v1.12.4
     container_name: datn-qdrant
     restart: unless-stopped
+    mem_limit: ${QDRANT_MEMORY_LIMIT:-768m}
     ports:
       - "6333:6333" # REST + dashboard (http://localhost:6333/dashboard)
       - "6334:6334" # gRPC
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - qdrant_data:/qdrant/storage
     environment:
       QDRANT__SERVICE__GRPC_PORT: "6334"
       QDRANT__LOG_LEVEL: INFO
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  recommender:
+    build:
+      context: .
+      dockerfile: apps/recommender/Dockerfile
+    container_name: datn-recommender
+    restart: unless-stopped
+    # ML services are opt-in: `docker compose up` remains usable on laptops.
+    profiles: ["ai"]
+    mem_limit: ${RECOMMENDER_MEMORY_LIMIT:-1400m}
+    environment:
+      DATN_DATA_DIR: /data
+      DATN_DEVICE: ${RECOMMENDER_DEVICE:-cpu}
+      # Native BLAS/Torch pools otherwise reserve one arena per CPU core.
+      MALLOC_ARENA_MAX: "2"
+      OMP_NUM_THREADS: ${ML_NUM_THREADS:-2}
+      MKL_NUM_THREADS: ${ML_NUM_THREADS:-2}
+      OPENBLAS_NUM_THREADS: ${ML_NUM_THREADS:-2}
+    volumes:
+      - ./data:/data:ro
+    ports:
+      - "8100:8100"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, json; res = json.loads(urllib.request.urlopen('http://localhost:8100/health').read().decode()); exit(0 if res.get('model_loaded') else 1)"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 30
+      start_period: 25s
+
+  # Multimodal RAG chatbot: Jina CLIP v2 query encoder + Qdrant (products/reviews)
+  # + the recommender checkpoint + an optional OpenAI-compatible LLM.
+  # First start downloads/loads Jina CLIP v2 (~1.7 GB); the cache is kept in ./data/hf_cache.
+  rag:
+    build:
+      context: .
+      dockerfile: apps/rag/Dockerfile
+    container_name: datn-rag
+    restart: unless-stopped
+    profiles: ["ai"]
+    # Jina CLIP v2 is the largest resident model. Steady state is ~2.5 GB (weights kept as bf16,
+    # src/datn/retrieval/compact.py), but loading peaks at ~4.4 GB for about a minute, and the transformers
+    # remote code builds the text tower in fp32 first. Swap is disabled on purpose: with a limit below the
+    # peak, Docker silently pushed ~1 GB of weights into swap and every query then paid page-in latency.
+    mem_limit: ${RAG_MEMORY_LIMIT:-5g}
+    memswap_limit: ${RAG_MEMORY_LIMIT:-5g}
+    environment:
+      RAG_QDRANT_URL: http://qdrant:6333
+      RAG_RECOMMENDER_URL: http://recommender:8100
+      RAG_DEVICE: ${RECOMMENDER_DEVICE:-cpu}
+      # LLM (optional; empty => deterministic answers built from the data). Put these in ./.env, see .env.example.
+      # Gemini: RAG_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai, RAG_LLM_MODEL=gemini-3.5-flash-lite
+      RAG_LLM_BASE_URL: ${RAG_LLM_BASE_URL:-}
+      RAG_LLM_MODEL: ${RAG_LLM_MODEL:-}
+      RAG_LLM_API_KEY: ${RAG_LLM_API_KEY:-}
+      RAG_LLM_REASONING_EFFORT: ${RAG_LLM_REASONING_EFFORT:-}
+      RAG_LLM_MAX_TOKENS: ${RAG_LLM_MAX_TOKENS:-1024}
+      MALLOC_ARENA_MAX: "2"
+      OMP_NUM_THREADS: ${ML_NUM_THREADS:-2}
+      MKL_NUM_THREADS: ${ML_NUM_THREADS:-2}
+      OPENBLAS_NUM_THREADS: ${ML_NUM_THREADS:-2}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data/hf_cache:/hf_cache
+    ports:
+      - "8200:8200"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, json; res = json.loads(urllib.request.urlopen('http://localhost:8200/health').read().decode()); exit(0 if res.get('encoder_loaded') and res.get('status') == 'ok' else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: datn-backend
+    restart: unless-stopped
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-512m}
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:-mini_market_secret_pass_2026}@postgres:5432/${POSTGRES_DB:-mini_market}
+      JWT_SECRET: ${JWT_SECRET:-shopsense-datn-super-secret-jwt-key-2026-secure}
+      QDRANT_URL: http://qdrant:6333
+      # Empty by default: routes use their built-in Qdrant/catalog/keyword
+      # fallbacks instead of waiting for optional AI containers to time out.
+      DATN_RECOMMENDER_URL: ${DATN_RECOMMENDER_URL:-}
+      DATN_RAG_URL: ${DATN_RAG_URL:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
 volumes:
-  qdrant_storage:
-    name: datn_qdrant_storage
+  postgres_data:
+    name: backend_postgres_data
+    external: true
+  qdrant_data:
+    name: backend_qdrant_data
+    external: true

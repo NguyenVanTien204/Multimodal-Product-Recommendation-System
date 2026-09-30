@@ -2,6 +2,8 @@
 
 Tài liệu này phác thảo lộ trình phát triển chi tiết cho dự án **"Xây dựng hệ thống gợi ý sản phẩm đa phương thức ứng dụng RAG"**. Lộ trình bao gồm các công việc từ xây dựng nền tảng dữ liệu, trích xuất đặc trưng (embeddings), huấn luyện mô hình gợi ý, cho đến đóng gói dịch vụ API và phát triển hệ thống giao diện bọc ngoài (Wrapper System).
 
+> **Cập nhật 30/09/2026:** Pha 2–4 đã xong, Pha 5 đã cài đặt (còn kiểm thử end-to-end), Pha 6 đang làm. Chi tiết kiến trúc, số liệu và giới hạn: [`docs/rag_chatbot_design.md`](docs/rag_chatbot_design.md). Các mục checklist bên dưới giữ nguyên nội dung kế hoạch ban đầu; trạng thái thực tế nằm ở dòng *Trạng thái* của từng pha.
+
 ---
 
 ## Tổng quan Lộ trình Triển khai (Roadmap Overview)
@@ -50,7 +52,7 @@ Giai đoạn này giải quyết bài toán làm sạch dữ liệu lớn của 
 ---
 
 ### 🟡 Pha 2: Trích chọn Đặc trưng Đa phương thức & Huấn luyện Collaborative (Embeddings & CF Models)
-*Trạng thái: Đang triển khai (IN PROGRESS)*
+*Trạng thái: Đã hoàn thành (DONE) — dùng User Tower + Residual Listwise Reranker (checkpoint `balanced_two_stage_v2`, HR@10 test ≈ 3,5%) thay cho BPR/LightGCN; embedding Jina CLIP v2 (ảnh + text)*
 
 Trích xuất các đặc trưng ngữ nghĩa từ hình ảnh, văn bản sản phẩm và học vector biểu diễn hành vi người dùng (collaborative signal).
 
@@ -66,7 +68,7 @@ Trích xuất các đặc trưng ngữ nghĩa từ hình ảnh, văn bản sản
 ---
 
 ### ⚪ Pha 3: Xây dựng cơ chế Tìm kiếm lai & Indexing (FAISS Index & Hybrid Retrieval)
-*Trạng thái: Chưa thực hiện (PLANNED)*
+*Trạng thái: Đã hoàn thành (DONE) — dùng **Qdrant** thay FAISS (xem `docs/qdrant_vector_db_design.md`): collection `products` (152.086 điểm, vector ảnh + text, lọc giá/thương hiệu/rating) và tìm kiếm lai bằng weighted RRF*
 
 Xây dựng cơ sở dữ liệu vector và bộ máy tìm kiếm sản phẩm tương tự phục vụ quá trình sinh ứng viên gợi ý nhanh (Candidate Generation).
 
@@ -82,7 +84,7 @@ Xây dựng cơ sở dữ liệu vector và bộ máy tìm kiếm sản phẩm t
 ---
 
 ### ⚪ Pha 4: Bộ máy RAG & Giao tiếp Hội thoại (RAG Engine & Conversational Logic)
-*Trạng thái: Chưa thực hiện (PLANNED)*
+*Trạng thái: Đã hoàn thành (DONE) — collection `reviews` (295.383 review), context builder có trích dẫn, kiểm tra grounding, intent parser VI/EN, session + refine; LLM Gemini qua endpoint OpenAI-compatible (tuỳ chọn, có dự phòng)*
 
 Xây dựng cấu phần cốt lõi của RAG: Truy xuất thông tin bổ trợ (nhận xét của người dùng, chi tiết sản phẩm) và điều phối tương tác qua LLM.
 
@@ -98,7 +100,7 @@ Xây dựng cấu phần cốt lõi của RAG: Truy xuất thông tin bổ trợ
 ---
 
 ### ⚪ Pha 5: Đóng gói API FastAPI & Xây dựng Giao diện Next.js (Wrapper System)
-*Trạng thái: Chưa thực hiện (PLANNED)*
+*Trạng thái: Đã cài đặt, còn kiểm thử end-to-end (IN PROGRESS) — service `apps/rag` (`/chat /search /recommend /refine /explain /compare`), gateway `POST /chat` ở backend, giao diện chat Next.js; chưa chạy Docker `rag` + web trên trình duyệt*
 
 Đóng gói các mô hình toán học và logic RAG thành một **Hệ thống phần mềm** chạy thực tế, cho phép người dùng cuối tương tác.
 
@@ -121,7 +123,7 @@ Xây dựng cấu phần cốt lõi của RAG: Truy xuất thông tin bổ trợ
 ---
 
 ### ⚪ Pha 6: Thử nghiệm, Đánh giá Hệ thống & Viết Báo cáo (System Evaluation & Thesis Hardening)
-*Trạng thái: Chưa thực hiện (PLANNED)*
+*Trạng thái: Đang thực hiện (IN PROGRESS) — đã có: đánh giá truy xuất + độ trễ (Kaggle T4 và benchmark local); còn thiếu: ablation CF/Text/Image trên `balanced_v1`, cold-start theo nhóm, metric RAG với LLM thật (Ragas/TruLens), baseline BPR/MF*
 
 Chạy thực nghiệm tổng thể để viết báo cáo khoa học phục vụ bảo vệ đồ án tốt nghiệp.
 

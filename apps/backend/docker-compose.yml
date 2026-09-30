@@ -1,10 +1,12 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: datn-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mini_market}
       POSTGRES_USER: ${POSTGRES_USER:-mini_market}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mini_market_secret_pass_2026}
     ports: ["5432:5432"]
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
@@ -15,26 +17,36 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
+    container_name: datn-qdrant
+    restart: unless-stopped
     ports: ["6333:6333", "6334:6334"]
     volumes: [qdrant_data:/qdrant/storage]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:6333/healthz >/dev/null"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333' || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 20
 
   api:
     build: .
+    container_name: datn-backend
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-mini_market}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:-mini_market_secret_pass_2026}@postgres:5432/${POSTGRES_DB:-mini_market}
+      JWT_SECRET: ${JWT_SECRET:-shopsense-datn-super-secret-jwt-key-2026-secure}
       QDRANT_URL: http://qdrant:6333
       DATN_RECOMMENDER_URL: ${DATN_RECOMMENDER_URL:-http://recommender:8100}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports: ["8000:8000"]
     depends_on:
       postgres: { condition: service_healthy }
       qdrant: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   # Retrieval (User Tower) + reranking model service. Reads training artifacts
   # and Parquet directly (allowed here, unlike in `api`; see docs/web/06-frontend-architecture.md
@@ -43,6 +55,8 @@ services:
     build:
       context: ../..
       dockerfile: apps/recommender/Dockerfile
+    container_name: datn-recommender
+    restart: unless-stopped
     environment:
       DATN_DATA_DIR: /data
       DATN_DEVICE: ${RECOMMENDER_DEVICE:-cpu}
@@ -50,12 +64,16 @@ services:
       - ../../data:/data:ro
     ports: ["8100:8100"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:8100/health | grep -q '\"model_loaded\":true'"]
+      test: ["CMD", "python", "-c", "import urllib.request, json; res = json.loads(urllib.request.urlopen('http://localhost:8100/health').read().decode()); exit(0 if res.get('model_loaded') else 1)"]
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 30s
+      start_period: 25s
 
 volumes:
   postgres_data:
+    name: backend_postgres_data
+    external: true
   qdrant_data:
+    name: backend_qdrant_data
+    external: true

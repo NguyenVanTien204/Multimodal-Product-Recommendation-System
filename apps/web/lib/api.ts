@@ -1,4 +1,4 @@
-import { AiRecommendationItem, Cart, Category, Order, PaginatedProducts, Product, SimilarProduct, SystemHealth, User } from "./types";
+import { AiRecommendationItem, Cart, Category, ChatApiResponse, ChatRequestPayload, Order, PaginatedProducts, Product, SimilarProduct, SystemHealth, User } from "./types";
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from "./demo-fixtures";
 
 
@@ -333,4 +333,24 @@ export function formatVND(amount: number): string {
     style: "currency",
     currency: "VND",
   }).format(amount);
+}
+
+// ----------------- MULTIMODAL RAG CHAT -----------------
+export async function sendChat(payload: ChatRequestPayload): Promise<ChatApiResponse> {
+  const res = await fetchWithAuth("/chat", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(130_000),
+  });
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body.detail === "string") detail = body.detail;
+    } catch {
+      /* keep status text */
+    }
+    throw new Error(detail);
+  }
+  return res.json();
 }

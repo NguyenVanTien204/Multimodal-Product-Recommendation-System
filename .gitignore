@@ -228,3 +228,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Azure deployment local settings
+deploy/azure/config.env

@@ -1,0 +1,30 @@
+# Overlay for the Azure VM:  docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml --profile ai up -d
+# - every port is bound to 127.0.0.1 (reach services through `deploy/azure/vm.sh tunnel`), so a public IP exposes only SSH;
+# - the convenience defaults for the database password and JWT secret are replaced by required variables.
+# `!override` needs Docker Compose >= 2.24 (cloud-init installs the current one).
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+
+  qdrant:
+    ports: !override
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+
+  recommender:
+    ports: !override
+      - "127.0.0.1:8100:8100"
+
+  rag:
+    ports: !override
+      - "127.0.0.1:8200:8200"
+
+  backend:
+    ports: !override
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-mini_market}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}

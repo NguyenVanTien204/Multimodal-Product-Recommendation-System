@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .auth.router import router as auth_router
 from .cart.router import router as cart_router
 from .catalog.router import router as catalog_router
+from .chat.router import router as chat_router
 from .core.config import settings
 from .core.database import Base, engine
 from .orders.router import router as order_router
@@ -24,6 +25,7 @@ app.include_router(catalog_router)
 app.include_router(cart_router)
 app.include_router(order_router)
 app.include_router(recommendation_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")

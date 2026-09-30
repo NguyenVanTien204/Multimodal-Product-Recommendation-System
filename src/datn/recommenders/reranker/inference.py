@@ -105,8 +105,25 @@ class RerankerPipeline:
             dropout=model_cfg["dropout"],
             content_matrix=content_matrix,
         ).to(resolved_device)
-        state_dict = torch.load(user_tower_dir / "user_tower.pt", map_location=resolved_device)
-        tower.load_state_dict(state_dict)
+        # ``content_matrix`` is reconstructed above from the mounted, memory-
+        # mapped embedding files.  Loading its identical serialized copy from
+        # the checkpoint creates another ~273 MiB allocation during startup.
+        # Drop that redundant entry before applying the learned parameters.
+        # mmap also prevents the remaining checkpoint tensors being duplicated
+        # while torch deserializes them.
+        state_dict = torch.load(
+            user_tower_dir / "user_tower.pt",
+            map_location=resolved_device,
+            weights_only=True,
+            mmap=True,
+        )
+        state_dict.pop("content_matrix", None)
+        missing, unexpected = tower.load_state_dict(state_dict, strict=False)
+        if set(missing) != {"content_matrix"} or unexpected:
+            raise ValueError(
+                "user tower checkpoint is incompatible with the serving model: "
+                f"missing={missing}, unexpected={unexpected}"
+            )
         tower.eval()
         for p in tower.parameters():
             p.requires_grad_(False)
@@ -123,7 +140,7 @@ class RerankerPipeline:
             last_item=candidate_budget["last_item"],
         )
 
-        checkpoint = torch.load(reranker_dir / "reranker.pt", map_location=resolved_device)
+        checkpoint = torch.load(reranker_dir / "reranker.pt", map_location=resolved_device, weights_only=True)
         if tuple(checkpoint["feature_names"]) != FEATURE_NAMES:
             raise ValueError("reranker checkpoint feature order does not match FEATURE_NAMES")
         ranker = ResidualListwiseRanker(len(FEATURE_NAMES)).to(resolved_device)

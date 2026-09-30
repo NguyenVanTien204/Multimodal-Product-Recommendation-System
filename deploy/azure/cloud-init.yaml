@@ -1,0 +1,16 @@
+#cloud-config
+# First-boot setup for the DATN VM: Docker (with a recent compose plugin) + swap. No ports are opened here.
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - rsync
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - for u in $(ls /home); do usermod -aG docker "$u"; done
+  # Host swap protects sshd/dockerd when the encoder loads (containers themselves get no swap, see docker-compose.yml).
+  - fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  - sysctl -w vm.swappiness=10 && echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
+  - touch /var/lib/cloud/datn-ready

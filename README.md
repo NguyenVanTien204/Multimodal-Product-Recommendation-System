@@ -76,3 +76,34 @@ training history, môi trường và SHA256 thành checkpoint bất biến:
 ```powershell
 .venv\Scripts\datn-checkpoint --destination data/checkpoints/balanced_two_stage_v2
 ```
+
+## Chatbot RAG gợi ý và tìm kiếm sản phẩm đa phương thức
+
+Kiến trúc, quyết định thiết kế, số liệu đo và giới hạn: [docs/rag_chatbot_design.md](docs/rag_chatbot_design.md).
+
+```powershell
+docker compose up -d postgres qdrant
+pip install -e ".[rag,dev]"
+datn-retrieval index-products            # collection `products` (vector đã có sẵn)
+datn-retrieval import-reviews --embeddings data/embedding/review_embeddings.npy --meta data/embedding/reviews_meta.parquet
+# review_embeddings.npy được tạo bằng notebooks/kaggle_rag_reviews_and_eval.ipynb (GPU Kaggle)
+
+copy .env.example .env                   # điền RAG_LLM_API_KEY (Gemini); để trống = chạy không LLM
+python scripts/check_llm.py              # tự kiểm LLM: kết nối, câu trả lời có căn cứ, chống prompt-injection
+docker compose --profile ai up -d --build  # Bỏ comment DATN_RECOMMENDER_URL và DATN_RAG_URL trong .env trước khi chạy
+python scripts/benchmark_rag.py --label gpu --reps 10   # đo độ trễ dịch vụ đang chạy
+pytest                                   # 78 test (không cần GPU, Qdrant hay LLM)
+```
+
+### Tiết kiệm RAM khi chạy đủ stack
+
+Qdrant dùng vector INT8, payload on-disk và graph HNSW nhỏ hơn để giảm RAM khi cùng chạy Jina CLIP. Cấu hình này chỉ có hiệu lực khi tạo collection mới, vì vậy sau khi cập nhật mã cần tái tạo index một lần (lệnh này xóa hai collection Qdrant cũ rồi nạp lại từ các file local):
+
+```powershell
+datn-retrieval index-products --recreate
+datn-retrieval import-reviews --embeddings data/embedding/review_embeddings.npy --meta data/embedding/reviews_meta.parquet
+```
+
+Đổi lại, truy vấn vector có thể tăng nhẹ độ trễ và recall xấp xỉ của HNSW thấp hơn cấu hình `m=32`; RRF và reranker vẫn xử lý lại tập ứng viên trước khi trả kết quả.
+
+LLM dùng Gemini qua endpoint tương thích OpenAI (`https://generativelanguage.googleapis.com/v1beta/openai`, model `gemini-3.5-flash-lite` hoặc `gemini-3.5-flash`). Khoá API chỉ đặt trong `.env` (đã nằm trong `.gitignore`), không bao giờ commit.

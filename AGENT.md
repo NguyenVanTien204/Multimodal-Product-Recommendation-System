@@ -32,13 +32,13 @@ graph TD
     %% Core Recommend Engine
     subgraph RecEngine ["Lớp Gợi ý & Tìm kiếm (Retrieval & Ranking Layer)"]
         Fusion["Action-aware Multimodal Two-Tower + Source Union"]
-        FaissItem["FAISS Product Index (products.faiss)"]
+        FaissItem["Qdrant collection products (vector ảnh + text)"]
         Reranker["Residual Listwise Reranker + Business Filters"]
     end
 
     %% RAG Engine
     subgraph RAGEngine ["Lớp RAG (RAG Layer)"]
-        FaissReview["FAISS Review Index (reviews.faiss)"]
+        FaissReview["Qdrant collection reviews"]
         ContextBuilder["Context Builder (Metadata + Reviews)"]
         LLM["Large Language Model (Explain / Compare)"]
     end
@@ -77,6 +77,8 @@ graph TD
     DuckDB -.-> |Read Metadata| ParquetData
 ```
 
+> **Cập nhật kiến trúc 30/09/2026:** FAISS được thay bằng Qdrant; lớp RAG/Agent đã cài đặt ở `src/datn/{retrieval,rag,agent}` và `apps/rag`. Sơ đồ trên phản ánh luồng hiện tại.
+
 ---
 
 ## 2. 6 Trụ cột Hệ thống bắt buộc (6 Core Pillars Contract)
@@ -95,7 +97,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
 *   **Tiêu chuẩn:** Hệ thống phải hỗ trợ tìm kiếm ngữ nghĩa thời gian thực trên không gian biểu diễn đa phương thức (Multimodal Representation) kết hợp bộ lọc thuộc tính cứng.
 *   **Quy định kỹ thuật:**
     *   Embeddings của văn bản (`text_embeddings.npy`) và hình ảnh (`image_embeddings.npy`) phải được chuẩn hóa (normalize) trước khi lưu. Khi có raw media, ưu tiên pretrained CLIP-family encoder; với Coveo, dùng vector 50 chiều chính thức do dataset cung cấp, lưu provenance và mask thiếu dữ liệu thay vì tái mã hóa không thể kiểm chứng.
-    *   Index tìm kiếm tương đồng phải sử dụng thư viện hiệu năng cao như **FAISS** (`products.faiss` và `reviews.faiss`).
+    *   Index tìm kiếm tương đồng phải dùng vector DB hiệu năng cao. **Đã chọn Qdrant** (thay FAISS, xem `docs/qdrant_vector_db_design.md`): collection `products` và `reviews`, có payload filter và index HNSW.
     *   Quy trình tìm kiếm bắt buộc phải hỗ trợ **Hybrid Retrieval**: Lọc trước hoặc lọc sau các điều kiện cứng như khoảng giá (price), danh mục (category), thương hiệu (brand) bằng DuckDB/SQL trước khi trả về danh sách ứng viên Top-K.
 
 ### Trụ cột 3: Core Recommendation & RAG Engine
@@ -106,7 +108,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
         $$E_{\text{final}} = \lambda E_{\text{cf}} + (1 - \lambda) E_{\text{content}}$$
         Hệ số $\alpha, \beta, \lambda$ phải được tối ưu trên tập Validation. Pipeline Coveo dùng action-aware two-tower, trong đó item tower cộng ID residual với projection text/image và session tower mã hóa chuỗi hành vi; candidate union có thể bổ sung popularity/content source. Mọi weight hoặc source size đều chỉ được chọn trên Validation.
     *   **Reranking:** Loại bỏ các sản phẩm đã tương tác trong context (nếu giao thức yêu cầu), áp dụng các bộ lọc nghiệp vụ, và báo riêng candidate recall, conditional HR và HR end-to-end. Không được force-add ground-truth target vào candidate pool.
-    *   **RAG Context Builder:** Trích xuất metadata sản phẩm + $N$ review có điểm `helpful_vote` cao nhất từ `reviews.parquet` (thông qua `reviews.faiss` index) có cùng `item_id`.
+    *   **RAG Context Builder:** Trích xuất metadata sản phẩm + $N$ review có điểm `helpful_vote` cao nhất từ `reviews.parquet` (thông qua Qdrant collection `reviews`) có cùng `item_id`.
     *   **LLM Prompting:** Chỉ chuyển thông tin ngữ cảnh đã truy xuất và profile người dùng vào prompt. **LLM không được tự ý sinh thông tin về giá cả, thông số kỹ thuật hoặc các review không có trong ngữ cảnh được cung cấp (chống Hallucination).**
 
 ### Trụ cột 4: Session & State Management
@@ -147,7 +149,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
         *   [`src/datn/data/`](file:///d:/WorkSpace/Work/DATN/src/datn/data/): ETL và data pipeline.
         *   `src/datn/features/`: Trích xuất đặc trưng đa phương thức (embeddings).
         *   `src/datn/recommenders/`: Các mô hình baseline và late fusion.
-        *   `src/datn/retrieval/`: FAISS index và truy xuất hybrid.
+        *   `src/datn/retrieval/`: Qdrant collections (`products`, `reviews`) và truy xuất hybrid.
         *   `src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
         *   `src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
         *   `apps/backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.

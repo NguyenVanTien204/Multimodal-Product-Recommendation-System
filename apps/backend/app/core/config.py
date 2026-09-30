@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     access_token_minutes: int = 60
     qdrant_url: str = "http://localhost:6333"
     datn_recommender_url: str | None = None
+    datn_rag_url: str | None = None  # multimodal RAG chat service (apps/rag)
     model_version: str = "reranker_v2"
     cors_origins: str = "http://localhost:3000"
 
