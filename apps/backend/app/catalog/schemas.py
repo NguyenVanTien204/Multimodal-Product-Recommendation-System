@@ -26,6 +26,8 @@ class ProductOut(ProductIn):
     model_config = ConfigDict(from_attributes=True)
     id: int
     is_active: bool
+    audience: str | None = None
+    attributes: dict | None = None
 
 
 class PaginatedProductsOut(BaseModel):

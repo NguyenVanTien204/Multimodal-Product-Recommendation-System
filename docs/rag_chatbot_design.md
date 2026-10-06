@@ -1,6 +1,6 @@
 # Chatbot RAG gợi ý & tìm kiếm sản phẩm đa phương thức
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** phần hệ thống này (kho vector, RAG, web) hiện dựng trên dữ liệu **Amazon** vì chỉ Amazon có review văn bản; H&M không có review. Việc chuyển hay giữ nguyên là quyết định D2/D3 trong [`./hm/05_thesis_plan.md`](./hm/05_thesis_plan.md); bộ dữ liệu chính mới của đề tài là **H&M** ([`./hm/README.md`](./hm/README.md)).
+> **Phạm vi bộ dữ liệu (cập nhật 06/10/2026):** tài liệu này mô tả hệ thống được xây và đo trên dữ liệu **Amazon** (152.086 sản phẩm, 1024 chiều, review thật). Từ 06/10/2026 web, RAG và recommender chạy trên **H&M** (quyết định D2/D3 đã chốt trong [`./hm/05_thesis_plan.md`](./hm/05_thesis_plan.md)): xem [`./hm/06_web_migration.md`](./hm/06_web_migration.md) cho những gì đã đổi (catalog, vector 512 chiều, bộ lọc nhóm khách/màu, review minh hoạ). Các con số đo ở các mục 7–10 bên dưới (độ trễ, review → sản phẩm, tiếng Việt) **chỉ đúng cho Amazon**. Mã nguồn vẫn hỗ trợ cả hai catalog, chọn bằng biến môi trường `DATN_PRODUCTS_COLLECTION`, `DATN_REVIEWS_COLLECTION`, `DATN_VECTOR_SIZE`.
 
 Tài liệu mô tả hệ thống chatbot đã xây dựng (Pha 3–5 trong ROADMAP): kiến trúc, quyết định thiết kế, cách chạy, và các giới hạn đã biết.
 

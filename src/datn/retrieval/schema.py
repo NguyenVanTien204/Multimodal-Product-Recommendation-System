@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import os
+
 from ..vectordb.schema import VECTOR_IMAGE, VECTOR_TEXT
 
-PRODUCTS_COLLECTION = "products"
-REVIEWS_COLLECTION = "reviews"
+# The catalog is selectable per deployment: Amazon (defaults: 1024-d vectors) or H&M
+# (DATN_PRODUCTS_COLLECTION=hm_products DATN_REVIEWS_COLLECTION=hm_reviews DATN_VECTOR_SIZE=512).
+PRODUCTS_COLLECTION = os.environ.get("DATN_PRODUCTS_COLLECTION", "products")
+REVIEWS_COLLECTION = os.environ.get("DATN_REVIEWS_COLLECTION", "reviews")
 
-# Jina CLIP v2 latent size shared by the image, text and review vectors.
-VECTOR_SIZE = 1024
+# Jina CLIP v2 latent size shared by the image, text and review vectors (H&M embeddings are Matryoshka-cut to 512).
+VECTOR_SIZE = int(os.environ.get("DATN_VECTOR_SIZE", "1024"))
+
+# Payload field the "popular products" fallback sorts by (needs an integer payload index). H&M: sold_28d.
+POPULARITY_KEY = os.environ.get("DATN_POPULARITY_KEY", "review_count")
 
 # Same conversion the marketplace importer (apps/backend/scripts/import_all_152k.py)
 # used to turn the catalog's USD price into the VND price the shop displays.
@@ -31,6 +38,17 @@ P_HAS_IMAGE = "has_image"
 P_HAS_TEXT = "has_text"
 P_IMAGE_FALLBACK = "is_image_fallback"
 
+# H&M-only `products` payload fields (the catalog has no brand: everything is H&M).
+P_AUDIENCE = "audience"  # women | men | divided | kids | baby | other (derived from section_name)
+P_PRODUCT_TYPE = "product_type"
+P_PRODUCT_GROUP = "product_group"
+P_COLOUR = "colour"
+P_APPEARANCE = "appearance"
+P_SECTION = "section"
+P_DEPARTMENT = "department"
+P_REVIEWS_MOCK = "reviews_are_mock"  # True: the rating/reviews of this product are borrowed demo data
+P_SOLD_28D = "sold_28d"  # units sold in the 28 days before the shop clock (best-seller signal)
+
 # `reviews` payload.
 R_PRODUCT_ID = "product_id"
 R_ITEM_ID = "item_id"
@@ -39,3 +57,4 @@ R_HELPFUL = "helpful_vote"
 R_VERIFIED = "verified_purchase"
 R_TITLE = "title"
 R_TEXT = "text"
+R_IS_MOCK = "is_mock"  # True: review borrowed from another catalog (H&M has no review text)

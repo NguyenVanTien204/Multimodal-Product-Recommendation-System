@@ -199,6 +199,16 @@ class JinaClipEncoder:
             release_memory()
 
     # ---- encoding ----------------------------------------------------------------
+    @staticmethod
+    def _fit_catalog(vectors: np.ndarray) -> np.ndarray:
+        """Match the catalog's vector size. The H&M catalog was embedded with Matryoshka truncation to 512-d
+        (DATN_VECTOR_SIZE=512): cut the unit vector and re-normalise, which is what `truncate_dim` does."""
+        from . import schema as S
+
+        if S.VECTOR_SIZE >= vectors.shape[1]:
+            return vectors
+        return _l2_normalize(vectors[:, : S.VECTOR_SIZE])
+
     def _text(self, texts: Sequence[str], task: str | None, batch_size: int) -> np.ndarray:
         self.load()
         import torch
@@ -208,10 +218,10 @@ class JinaClipEncoder:
             out = self._model.encode_text(
                 list(texts), batch_size=batch_size, convert_to_numpy=True, show_progress_bar=False, **kwargs
             )
-        return _l2_normalize(np.asarray(out, dtype=np.float32))
+        return self._fit_catalog(_l2_normalize(np.asarray(out, dtype=np.float32)))
 
     def encode_query(self, texts: Sequence[str]) -> np.ndarray:
-        """User queries -> (n, 1024) unit vectors."""
+        """User queries -> (n, VECTOR_SIZE) unit vectors (1024 for Amazon, 512 for H&M)."""
         return self._text(texts, "retrieval.query", batch_size=16)
 
     def encode_passages(self, texts: Sequence[str], batch_size: int = 64) -> np.ndarray:
@@ -229,4 +239,4 @@ class JinaClipEncoder:
                 prepared, batch_size=batch_size, convert_to_numpy=True, show_progress_bar=False
             )
         self._trim()
-        return _l2_normalize(np.asarray(out, dtype=np.float32))
+        return self._fit_catalog(_l2_normalize(np.asarray(out, dtype=np.float32)))

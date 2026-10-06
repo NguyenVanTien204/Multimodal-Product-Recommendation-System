@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,6 +21,15 @@ class Settings(BaseSettings):
     max_k: int = 50
     max_history: int = 50
     model_version: str = "user_tower_balanced_v1+reranker_v2"
+
+    # "amazon": legacy Transformer tower + residual reranker (kept as reference/rollback).
+    # "hm": H&M tower + serving rule + 7 candidate sources + LightGBM (src/datn/recommenders/hm).
+    engine: str = "amazon"
+    hm_dir: str = "hm/serving"                 # tower.pt, reranker_lgbm.txt, items.parquet, *_embeddings.npy, item_daily_counts.parquet
+    hm_as_of: date = date(2020, 9, 16)         # the shop's clock (= test cutoff of the thesis)
+    hm_cold_every: int = 0                     # 0 = best overall accuracy; 10/5 reserve slots for never-sold items
+    hm_model_version: str = "hm_v1_tower_refit+lgbm_24f"
+    hm_shop_ids: str = "hm/serving/shop_item_ids.txt"   # optional: article_ids that exist in the shop (one per line)
 
     @property
     def user_tower_dir(self) -> Path:
@@ -60,6 +70,14 @@ class Settings(BaseSettings):
     @property
     def text_metadata_path(self) -> Path:
         return self.data_dir / self.text_metadata
+
+    @property
+    def hm_path(self) -> Path:
+        return self.data_dir / self.hm_dir
+
+    @property
+    def hm_shop_ids_path(self) -> Path:
+        return self.data_dir / self.hm_shop_ids
 
 
 settings = Settings()

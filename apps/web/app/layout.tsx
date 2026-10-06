@@ -4,9 +4,9 @@ import { AppProvider } from "@/lib/context";
 import { LayoutWrapper } from "@/components/layout-wrapper";
 
 export const metadata: Metadata = {
-  title: "ShopSense — Sàn Thương Mại Điện Tử & Gợi Ý AI Đa Phương Thức",
+  title: "ShopSense — Nền Tảng Thời Trang & Mua Sắm Cá Nhân Hóa",
   description:
-    "ShopSense: Nền tảng thương mại điện tử tích hợp hệ sinh thái gợi ý tuần tự (Sequential Recommender), tìm kiếm vector Qdrant và trợ lý ảo AI mua sắm.",
+    "ShopSense: Khám phá hàng chục ngàn mẫu thời trang đa phong cách cùng trải nghiệm mua sắm thông minh, gợi ý chuẩn gu và dịch vụ tận tâm.",
 };
 
 export default function RootLayout({

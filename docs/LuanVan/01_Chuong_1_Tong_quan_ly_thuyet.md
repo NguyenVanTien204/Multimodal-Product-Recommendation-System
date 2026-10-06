@@ -1,248 +1,154 @@
 # CHƯƠNG 1: TỔNG QUAN LÝ THUYẾT VỀ LĨNH VỰC NGHIÊN CỨU
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+> **Phạm vi chương:** H&M là bộ dữ liệu chính. Chương này trình bày cơ sở lý thuyết; cấu hình, kết quả thực nghiệm và chi tiết triển khai được dành cho các chương sau.
 
 ---
 
 ## 1.1. Tổng quan bài toán
 
 ### 1.1.1. Bài toán gợi ý sản phẩm trong thương mại điện tử
-Trong kỷ nguyên số, các nền tảng thương mại điện tử (E-commerce) phải đối mặt với sự gia tăng theo cấp số nhân của số lượng hàng hóa và thông tin mô tả. Khái niệm **Hệ thống gợi ý sản phẩm (Product Recommendation System)** được định nghĩa là một hệ thống phần mềm thông minh có chức năng tự động ước lượng mức độ quan tâm của người dùng đối với các sản phẩm chưa từng tương tác, từ đó đề xuất một danh sách hữu hạn các mặt hàng phù hợp nhất nhằm tối ưu hóa trải nghiệm khách hàng và gia tăng doanh số cho doanh nghiệp.
+Hệ thống gợi ý sản phẩm là thành phần hỗ trợ người dùng khám phá những mặt hàng có khả năng phù hợp với nhu cầu của họ trong một danh mục lớn. Thay vì trình bày cùng một danh sách cho mọi khách hàng, hệ thống ước lượng mức độ phù hợp giữa từng người dùng và sản phẩm, sau đó sắp xếp các sản phẩm theo điểm dự đoán. Đây là cách nhìn phổ biến của bài toán gợi ý: khai thác thông tin về người dùng, sản phẩm và các tương tác đã quan sát để dự đoán những lựa chọn có ích tiếp theo ([Adomavicius và Tuzhilin, 2005](https://ids.csom.umn.edu/faculty/gedas/papers/recommender-systems-survey-2005.pdf)).
 
-- **Vai trò của gợi ý cá nhân hóa**: Gợi ý cá nhân hóa đóng vai trò là "người định hướng" (navigator) trên sàn thương mại điện tử, giúp rút ngắn hành trình tìm kiếm sản phẩm từ hàng giờ xuống vài giây, giảm tỷ lệ thoát trang (*bounce rate*), gia tăng giá trị đơn hàng trung bình (*Average Order Value - AOV*) và củng cố lòng trung thành của khách hàng.
-- **Đầu vào và đầu ra của bài toán**:
-  - *Đầu vào*: Tập hợp người dùng $\mathcal{U} = \{u_1, u_2, \dots, u_{|\mathcal{U}|}\}$, danh mục sản phẩm $\mathcal{I} = \{i_1, i_2, \dots, i_{|\mathcal{I}|}\}$, lịch sử chuỗi tương tác tuần tự của từng người dùng $S_u = (i_1^{(u)}, i_2^{(u)}, \dots, i_{|S_u|}^{(u)})$ được sắp xếp theo mốc thời gian tăng dần, cùng với tập siêu dữ liệu đa dạng của sản phẩm gồm văn bản mô tả $T_i$ (tiêu đề, thuộc tính, thương hiệu) và hình ảnh trực quan $V_i$.
-  - *Đầu ra*: Một danh sách xếp hạng Top-$K$ sản phẩm $\mathcal{R}_K(u) = [i_{(1)}, i_{(2)}, \dots, i_{(K)}] \subset \mathcal{I} \setminus S_u$ có điểm số dự đoán phù hợp cao nhất dành cho người dùng $u$.
-- **Các đặc trưng thách thức chính**:
-  1. *Dữ liệu cực thưa (Data Sparsity)*: Ma trận tương tác giữa người dùng và sản phẩm thường có mật độ phản hồi thực tế dưới $0.1\%$, khiến các mô hình phân rã ma trận truyền thống không thể thu thập đủ tín hiệu đồng xuất hiện.
-  2. *Phân phối đuôi dài (Long-tail Distribution)*: Phần lớn các tương tác tập trung vào một nhóm nhỏ các sản phẩm cực kỳ phổ biến (*Head items*), trong khi đại đa số danh mục sản phẩm (*Tail items*) nhận được rất ít hoặc không có tương tác, dẫn đến hiện tượng thiên lệch phổ biến (*Popularity Bias*).
-  3. *Vấn đề khởi đầu lạnh (Cold-start Problem)*: Xảy ra đối với những sản phẩm mới được đăng bán hoặc người dùng mới tham gia hệ thống, nơi hoàn toàn thiếu vắng lịch sử tương tác quá khứ để mô hình hóa hành vi.
+Trong thương mại điện tử, cá nhân hóa giúp giảm công sức duyệt danh mục và đưa các sản phẩm có liên quan đến sở thích của từng khách hàng lên những vị trí dễ nhìn thấy hơn. Chẳng hạn, hai khách hàng cùng tìm một loại áo có thể nhận các gợi ý khác nhau dựa trên lịch sử mua sắm, kiểu dáng hoặc màu sắc họ quan tâm. Hệ thống gợi ý cũng tạo cơ hội để người dùng khám phá những sản phẩm phù hợp mà họ chưa chủ động tìm kiếm; một ứng dụng thực tế của hướng tiếp cận này được mô tả trong hệ thống gợi ý của Amazon ([Linden và cộng sự, 2003](https://ieeexplore.ieee.org/document/1167344)). Những tác động kinh doanh như tăng tỷ lệ mua hàng hoặc giá trị đơn hàng cần được kiểm chứng bằng dữ liệu vận hành, vì vậy không được xem là kết quả mặc định của mọi hệ thống gợi ý.
+
+Có thể mô hình hóa bài toán tại thời điểm $t$ như sau. Gọi $\mathcal{U}$ là tập người dùng, $\mathcal{I}_t$ là tập sản phẩm có thể được đề xuất, và $H_u^{<t}=\{(i_j,a_j,t_j)\mid t_j<t\}$ là lịch sử của người dùng $u$, trong đó $i_j$ là sản phẩm, $a_j$ là loại tương tác (ví dụ: xem, thêm vào giỏ hoặc mua) và $t_j$ là thời điểm xảy ra. Mỗi sản phẩm $i$ có thể đi kèm siêu dữ liệu $m_i$ như danh mục, màu sắc, giá, cùng văn bản mô tả $x_i^{\mathrm{text}}$ và hình ảnh $x_i^{\mathrm{image}}$. Từ các đầu vào đó, mô hình tính điểm phù hợp $s(u,i,t)$ và trả về danh sách có thứ tự $R_K(u,t)=[i_{(1)},i_{(2)},\ldots,i_{(K)}]$ gồm $K$ sản phẩm có điểm cao trong $\mathcal{I}_t$, sau khi áp dụng các điều kiện hợp lệ của hệ thống. Việc có loại sản phẩm từng mua khỏi danh sách hay không phụ thuộc vào mục tiêu sử dụng; với những mặt hàng có thể mua lặp lại, lịch sử mua không đồng nghĩa với việc sản phẩm phải bị loại.
+
+Ba đặc điểm dữ liệu khiến việc xây dựng danh sách này trở nên khó khăn. **Thứ nhất, dữ liệu tương tác thưa:** mỗi khách hàng thường chỉ tương tác với một phần nhỏ danh mục, nên phần lớn cặp người dùng–sản phẩm không có bản ghi. Nếu $\mathcal{E}$ là tập cặp đã quan sát, mật độ của ma trận tương tác là $|\mathcal{E}|/(|\mathcal{U}|\,|\mathcal{I}|)$; giá trị thấp làm giảm tín hiệu để học sở thích và độ tương đồng. Đặc biệt, đối với phản hồi ngầm như lượt xem hoặc giao dịch mua, việc không quan sát thấy tương tác không đủ để kết luận người dùng không thích sản phẩm ([Hu và cộng sự, 2008](https://yifanhu.net/PUB/cf.pdf)).
+
+**Thứ hai, phân phối đuôi dài:** một số sản phẩm phổ biến nhận nhiều tương tác, trong khi nhiều sản phẩm khác chỉ có ít dữ liệu. Mô hình phụ thuộc mạnh vào lịch sử tương tác vì thế có thể tiếp tục ưu tiên nhóm phổ biến và ít đưa sản phẩm ở phần đuôi vào danh sách gợi ý. Hiện tượng này được gọi là thiên lệch phổ biến và có thể làm giảm mức độ bao phủ của danh mục ([Abdollahpouri và cộng sự, 2019](https://cdn.aaai.org/ocs/18199/18199-78818-1-PB.pdf)).
+
+**Thứ ba, khởi đầu lạnh:** người dùng mới có ít hoặc chưa có lịch sử để suy ra sở thích; sản phẩm mới có ít hoặc chưa có tương tác để ước lượng mức độ phù hợp từ hành vi cộng tác. Đây là hai trường hợp khác nhau và cần được phân biệt khi thiết kế, đánh giá hệ thống. Với sản phẩm mới, siêu dữ liệu, văn bản và hình ảnh có thể cung cấp tín hiệu nội dung ban đầu, nhưng hiệu quả gợi ý vẫn phải được kiểm chứng trên nhóm sản phẩm đó ([Adomavicius và Tuzhilin, 2005](https://ids.csom.umn.edu/faculty/gedas/papers/recommender-systems-survey-2005.pdf)). Các thách thức trên là cơ sở để xem xét việc kết hợp tín hiệu hành vi với thông tin đa phương thức ở những mục tiếp theo.
 
 ### 1.1.2. Bài toán gợi ý đa phương thức và Chatbot RAG
-Nhằm vượt qua các rào cản trên, hướng nghiên cứu hiện đại chuyển dịch mạnh mẽ sang tích hợp đa phương thức và tương tác đàm thoại thông minh:
+Mục 1.1.1 cho thấy lịch sử tương tác chỉ phản ánh một phần sở thích của người dùng, nhất là khi sản phẩm có ít giao dịch. Trong gợi ý đa phương thức (*multimodal recommendation*), mô hình khai thác thêm nội dung sản phẩm bên cạnh tín hiệu hành vi. Lịch sử mua cho biết người dùng đã chọn những sản phẩm nào; văn bản như tên, loại hàng và mô tả cung cấp thông tin về thuộc tính; hình ảnh bổ sung tín hiệu về màu sắc, kiểu dáng và vẻ ngoài. Các nguồn thông tin này có thể được mã hóa thành đặc trưng để hỗ trợ ước lượng điểm phù hợp giữa người dùng và sản phẩm. Nghiên cứu về gợi ý có nhận biết hình ảnh đã cho thấy đặc trưng thị giác có thể bổ sung cho tín hiệu phản hồi ngầm trong bài toán xếp hạng cá nhân hóa ([He và McAuley, 2016](https://ojs.aaai.org/index.php/AAAI/article/view/9973)). Tuy nhiên, việc kết hợp nhiều nguồn dữ liệu không mặc nhiên cải thiện kết quả; đóng góp của từng nguồn cần được xác định bằng thực nghiệm trên cùng một giao thức đánh giá.
 
-- **Gợi ý đa phương thức (Multimodal Recommendation)**: Là hướng tiếp cận đồng thời khai thác ba luồng tín hiệu bổ trợ lẫn nhau:
-  - *Tín hiệu hành vi cộng tác (Collaborative Signal)*: Phản ánh thị hiếu ngầm qua chuỗi hành vi mua sắm trong quá khứ.
-  - *Tín hiệu ngữ nghĩa văn bản (Textual Signal)*: Cung cấp thông tin chi tiết về chất liệu vải, kích cỡ, công năng, xuất xứ thương hiệu.
-  - *Tín hiệu thị giác hình ảnh (Visual Signal)*: Cung cấp cảm nhận trực quan về phom dáng, hoa văn, màu sắc thực tế và phong cách thời trang.
-  Việc kết hợp đa phương thức cho phép hệ thống biểu diễn chính xác giá trị của một món đồ ngay cả khi món đồ đó chưa hề có tương tác mua hàng trong quá khứ.
-- **Chatbot hỗ trợ mua sắm thông minh**: Trong bối cảnh mua sắm trực tuyến hiện đại, khách hàng không chỉ muốn xem một danh sách đề xuất tĩnh, mà mong muốn được tư vấn chủ động thông qua đối thoại tự nhiên:
-  - Tìm kiếm linh hoạt (*Search*): Diễn đạt nhu cầu tự do ("Áo sơ mi lụa đi tiệc tối dưới 500k").
-  - Gợi ý cá nhân hóa (*Recommend*): Nhận đề xuất theo gu thời trang cá nhân.
-  - Tinh chỉnh linh hoạt (*Refine*): Yêu cầu điều chỉnh bộ lọc ("Đổi sang tông màu pastel hoặc giá rẻ hơn").
-  - Giải thích thấu đáo (*Explain*): Hiểu rõ lý do vì sao hệ thống lại gợi ý sản phẩm này.
-  - So sánh chi tiết (*Compare*): Đối chiếu ưu nhược điểm giữa hai sản phẩm dựa trên phản hồi của những người mua trước.
-- **Vai trò của Retrieval-Augmented Generation (RAG)**: Các mô hình ngôn ngữ lớn (LLM) nếu hoạt động độc lập rất dễ mắc lỗi "bịa đặt tri thức" (*Hallucination*). Bằng cách ứng dụng RAG, mọi câu trả lời của Chatbot đều được neo chặt (*grounded*) vào các thông tin sản phẩm và đánh giá thực tế được truy xuất trực tiếp từ cơ sở dữ liệu vector.
-- **Ranh giới trách nhiệm kiến trúc**:
-  - *Bộ máy gợi ý (Recommender System)*: Chịu trách nhiệm tính toán xếp hạng toán học tối ưu trên toàn bộ catalog để đề xuất danh sách Top-$K$ ứng viên phù hợp với người dùng.
-  - *Chatbot RAG*: Đóng vai trò là lớp giao diện giao tiếp thông minh, giải thích ngữ cảnh, hỗ trợ người dùng tinh chỉnh yêu cầu và trích xuất bằng chứng xác thực để trả lời câu hỏi.
+Bên cạnh danh sách gợi ý, người mua có thể diễn đạt nhu cầu dưới dạng hội thoại và điều chỉnh nhu cầu đó sau khi xem kết quả. Chatbot hỗ trợ các tác vụ tìm kiếm, gợi ý theo sở thích, tinh chỉnh điều kiện, giải thích lý do gợi ý và so sánh sản phẩm. Ví dụ, sau khi yêu cầu “tìm áo sơ mi màu xanh”, người dùng có thể nói “rẻ hơn” hoặc “tôi không thích sản phẩm thứ hai”. Những lượt trao đổi này cung cấp thông tin về nhu cầu hiện tại và phản hồi trực tiếp mà lịch sử mua sắm chưa thể hiện. Khả năng thu nhận và cập nhật sở thích qua nhiều lượt là một đặc điểm quan trọng của hệ gợi ý hội thoại ([Gao và cộng sự, 2021](https://arxiv.org/abs/2101.09459)).
+
+Trong hệ gợi ý hội thoại, phản hồi qua các lượt trao đổi có thể được tổ chức thành **bộ nhớ sở thích** của người dùng. Bộ nhớ này bổ sung cho lịch sử tương tác: thông tin về những sản phẩm được quan tâm có thể định hướng truy hồi ứng viên, còn các sở thích hoặc điều kiện mới giúp điều chỉnh thứ hạng kết quả. Nhờ đó, hệ thống có thể thích ứng với nhu cầu vừa được người dùng diễn đạt, thay vì chỉ dựa vào các giao dịch trong quá khứ. Đề tài xem việc đưa bộ nhớ sở thích vào cả truy hồi và xếp hạng là một phần của bài toán gợi ý, bên cạnh việc tạo câu trả lời trong hội thoại.
+
+RAG (*Retrieval-Augmented Generation*) kết hợp truy xuất thông tin liên quan với quá trình sinh ngôn ngữ ([Lewis và cộng sự, 2020](https://papers.neurips.cc/paper/2020/file/6b493230205f780e1bc26945df7481e5-Paper.pdf)). Trong bối cảnh dữ liệu thời trang của đề tài, thông tin được truy xuất cho câu trả lời chủ yếu là tên, thuộc tính và mô tả sản phẩm. Các nguồn này tạo ngữ cảnh để chatbot giải thích hoặc so sánh những đặc điểm có thể kiểm chứng; chúng không cung cấp ý kiến của người mua sau khi sử dụng sản phẩm. Về phạm vi trách nhiệm, mô hình gợi ý tính mức phù hợp và xếp hạng sản phẩm, còn lớp hội thoại hiểu yêu cầu, duy trì sở thích, chuyển chúng thành tín hiệu cho truy hồi–xếp hạng và diễn đạt kết quả dựa trên thông tin truy xuất.
 
 ---
 
 ## 1.2. Cơ sở lý thuyết về dữ liệu và tiền xử lý
 
 ### 1.2.1. Dữ liệu tương tác và dữ liệu sản phẩm
-Trong các hệ thống thương mại điện tử, dữ liệu thu thập được chia làm hai nhóm chính:
-- **Tín hiệu phản hồi của người dùng**:
-  - *Phản hồi rõ ràng (Explicit Feedback)*: Người dùng chủ động chấm điểm sản phẩm thông qua thang đo định lượng (ví dụ: rating từ 1 đến 5 sao). Ưu điểm là phản ánh chính xác mức độ hài lòng, nhưng nhược điểm là tỷ lệ người dùng để lại đánh giá thường rất thấp.
-  - *Phản hồi ngầm (Implicit Feedback)*: Thu thập thụ động qua các hành vi click chuột, xem trang chi tiết, thêm vào giỏ hàng hoặc thời gian dừng trang. Dữ liệu này rất dồi dào nhưng mang tính nhiễu cao.
-- **Quy ước tương tác trong đề tài**: Để xây dựng tập dữ liệu chất lượng cao từ các bản ghi đánh giá Amazon, đề tài quy định:
-  - *Tương tác tích cực (Positive Interaction)*: Các bản ghi có $rating \ge 4$ (sản phẩm thực sự làm người dùng hài lòng, thể hiện xu hướng ưa chuộng).
-  - *Tương tác âm mạnh (Strong Negative Interaction)*: Các bản ghi có $rating \le 2$ (sản phẩm gây thất vọng, hỗ trợ khai thác hard-negative khi huấn luyện reranker).
-- **Siêu dữ liệu sản phẩm (Product Metadata)**:
-  - Định danh sản phẩm: Mã chuẩn Amazon Standard Identification Number (`parent_asin` hay `item_id`).
-  - Dữ liệu văn bản: Tiêu đề (*title*), danh mục phân cấp (*category*), thương hiệu (*brand*), mô tả chi tiết (*description*), thuộc tính cấu tạo (*features*).
-  - Dữ liệu trực quan: Đường dẫn ảnh sản phẩm đại diện độ phân giải cao (*image_url*).
-  - Đánh giá của khách hàng (*Customer Reviews*): Tiêu đề nhận xét, nội dung văn bản đánh giá và số lượt bình chọn hữu ích (*helpful_vote*).
+Dữ liệu đầu vào của bài toán gợi ý có thể chia thành **lịch sử hành vi của người dùng** và **thông tin về sản phẩm**. Với bộ dữ liệu [H&M Personalized Fashion Recommendations](https://www.kaggle.com/c/h-and-m-personalized-fashion-recommendations/overview) được sử dụng trong đề tài, lịch sử hành vi gồm các giao dịch mua gắn với mã khách hàng, mã sản phẩm và thời điểm. Một giao dịch có thể biểu diễn là $(u,i,t)$, trong đó $u$ là khách hàng, $i$ là sản phẩm được mua và $t$ là thời điểm mua. Trật tự thời gian cho phép mô hình sử dụng những giao dịch đã xảy ra để dự đoán nhu cầu ở thời điểm tiếp theo. Một khách hàng cũng có thể mua lại cùng sản phẩm, vì vậy các lần mua cần được xem là những sự kiện theo thời gian thay vì mặc nhiên gộp thành một cặp người dùng–sản phẩm duy nhất.
+
+Giao dịch mua là một dạng **phản hồi ngầm** (*implicit feedback*): nó cho thấy khách hàng đã chọn sản phẩm, nhưng không trực tiếp cho biết mức độ hài lòng hay lý do mua. Dữ liệu H&M không có điểm đánh giá sao hoặc phản hồi “không thích” gắn với các giao dịch. Do đó, các giao dịch đã quan sát có thể được dùng làm tín hiệu mục tiêu cho bài toán dự đoán mua, còn việc không thấy một khách hàng mua sản phẩm nào đó không chứng minh họ không thích sản phẩm ấy. Phân biệt giữa “không quan sát thấy” và “phản hồi tiêu cực” là yêu cầu quan trọng khi học từ dữ liệu ngầm ([Hu và cộng sự, 2008](https://yifanhu.net/PUB/cf.pdf)). Các phản hồi được người dùng cung cấp trực tiếp trong hội thoại, nếu có, là một nguồn sở thích bổ sung và cần được hiểu khác với lịch sử giao dịch của bộ dữ liệu.
+
+Thông tin sản phẩm trong H&M gồm các **thuộc tính có cấu trúc** như loại sản phẩm, nhóm hàng, màu sắc và bộ phận kinh doanh; **văn bản** như tên và mô tả chi tiết; cùng **hình ảnh** sản phẩm. Thuộc tính và văn bản giúp nhận biết đặc điểm được mô tả bằng ngôn ngữ, còn hình ảnh thể hiện những yếu tố trực quan như kiểu dáng và màu sắc. Khi một sản phẩm có ít giao dịch, các nguồn nội dung này vẫn cung cấp thông tin để xây dựng biểu diễn sản phẩm, dù mức độ hữu ích của từng nguồn cần được đánh giá thực nghiệm ([He và McAuley, 2016](https://ojs.aaai.org/index.php/AAAI/article/view/9973)). Bộ dữ liệu H&M không cung cấp review của khách hàng; vì vậy, phân tích sở thích và tạo nội dung giải thích dựa trên nguồn này phải xuất phát từ lịch sử mua và thông tin sản phẩm sẵn có, không suy diễn ra nhận xét sau mua.
 
 ### 1.2.2. Tiền xử lý và xây dựng tập dữ liệu thực nghiệm
-Một quy trình tiền xử lý nghiêm ngặt là điều kiện tiên quyết để đảm bảo tính hợp lệ của nghiên cứu:
-- **Làm sạch và khử trùng lặp**:
-  - Chỉ giữ lại các tương tác có cờ `verified_purchase = True` nhằm loại bỏ các đánh giá ảo hoặc spam.
-  - Xử lý các cặp $(user, item)$ trùng lặp trong dữ liệu gốc: gộp về một bản ghi duy nhất tại thời điểm tương tác mới nhất.
-- **Lọc lặp Iterative K-core**:
-  - Nhằm loại bỏ các nút biên (thực thể có quá ít tương tác không đủ để học đặc trưng), giải thuật $K$-core được áp dụng lặp: loại bỏ các user có ít hơn $K_u = 5$ tương tác tích cực và các item có ít hơn $K_i = 2$ tương tác tích cực.
-  - Quá trình này được thực thi lặp tuần tự cho đến khi số lượng user và item đạt trạng thái ổn định (hội tụ). Điều này vừa đảm bảo người dùng có đủ độ dài chuỗi hành vi lịch sử để huấn luyện mô hình tuần tự, vừa giữ lại được phân phối đuôi dài tự nhiên của dữ liệu thời trang.
-- **Phân chia tập dữ liệu theo thời gian (Chronological Leave-last-out)**:
-  - Thay vì chia ngẫu nhiên (dễ gây ra rò rỉ dữ liệu từ tương lai về quá khứ), hệ thống sắp xếp chuỗi tương tác của từng người dùng theo thứ tự thời gian tăng dần:
-    - Tương tác tích cực cuối cùng $(t_{last})$ được giữ lại cho tập **Kiểm thử (Test Split)**.
-    - Tương tác tích cực liền trước $(t_{last-1})$ được dành cho tập **Thẩm định (Validation Split)**.
-    - Toàn bộ các tương tác trước đó $(t_1, \dots, t_{last-2})$ được dùng để **Huấn luyện (Train Split)**.
-  - Cơ chế này mô phỏng trung thực quy trình vận hành thực tế: dùng dữ liệu quá khứ để dự đoán hành vi trong tương lai.
+Tiền xử lý nhằm chuyển dữ liệu giao dịch và dữ liệu sản phẩm thành những quan sát nhất quán, có thể dùng để học và đánh giá hệ gợi ý. Trước hết cần kiểm tra định danh người dùng, định danh sản phẩm, thời điểm giao dịch và quan hệ giữa bản ghi giao dịch với danh mục sản phẩm. Những bản ghi sai định dạng, thiếu trường thiết yếu hoặc không thể liên kết với sản phẩm cần được xử lý theo quy tắc công bố trước. Đối với ảnh hay mô tả bị thiếu, hệ thống cần ghi nhận sự thiếu vắng thông tin để không nhầm một sản phẩm thiếu dữ liệu với một sản phẩm thực sự có nội dung rỗng.
+
+**Khử trùng lặp** phải dựa trên ý nghĩa của bản ghi. Hai dòng ghi lại cùng một giao dịch do lỗi nhập liệu có thể được xem là trùng kỹ thuật; ngược lại, hai lần mua cùng sản phẩm ở những thời điểm khác nhau là hai sự kiện hành vi có giá trị. Việc gộp mọi cặp người dùng–sản phẩm thành một dòng sẽ làm mất tín hiệu mua lặp lại và thay đổi lịch sử theo thời gian. Tương tự, lọc bỏ toàn bộ người dùng hoặc sản phẩm ít giao dịch có thể làm tập dữ liệu dễ học hơn nhưng cũng thay đổi phân phối ban đầu, đặc biệt làm giảm khả năng quan sát các trường hợp dữ liệu thưa và sản phẩm mới. Vì vậy, tiêu chí giữ hoặc loại bản ghi cần gắn với mục tiêu đánh giá và được báo cáo rõ ([Cañamares và cộng sự, 2020](https://doi.org/10.1007/s10791-020-09371-3)).
+
+Khi dữ liệu lớn cần **chọn mẫu**, quyết định chọn người dùng hoặc sản phẩm chỉ nên dựa trên thông tin đã tồn tại trước thời điểm dự đoán. Nếu dùng chính hành vi trong giai đoạn kiểm thử để chọn mẫu, tập đánh giá sẽ bị chi phối bởi thông tin tương lai. Mẫu cũng cần được mô tả bằng các đặc điểm như mức độ hoạt động của khách hàng, tần suất giao dịch và số sản phẩm có tương tác, bởi việc chỉ giữ khách hàng có lịch sử dài sẽ làm kết quả không còn đại diện cho người dùng mới. Đây là vấn đề về phạm vi suy luận của thí nghiệm, không chỉ là bước giảm kích thước dữ liệu.
+
+Với bài toán dự đoán giao dịch tương lai, cách chia dữ liệu phù hợp là dùng **các mốc thời gian chung** để tạo những giai đoạn liên tiếp: dữ liệu quá khứ cho huấn luyện, giai đoạn tiếp theo cho lựa chọn mô hình hoặc tham số, giai đoạn sau đó cho thẩm định và giai đoạn cuối cho kiểm thử. Tại mỗi mốc dự đoán, lịch sử người dùng và các thống kê sản phẩm như độ phổ biến chỉ được tính từ sự kiện trước mốc đó; giao dịch trong giai đoạn đích không được dùng để xây dựng đầu vào cho chính giai đoạn này. Khi một giai đoạn đã kết thúc, giao dịch của nó có thể trở thành lịch sử cho giai đoạn kế tiếp theo giao thức đã định. Cách chia theo từng người dùng nhưng không tôn trọng trục thời gian chung có thể đưa tương tác xảy ra trong tương lai của người này vào quá trình học trước khi dự đoán cho người khác, tạo ra rò rỉ dữ liệu ([Ji và cộng sự, 2020](https://arxiv.org/abs/2010.11060)). Tập kiểm thử cần được giữ riêng để báo cáo kết quả cuối cùng sau khi các lựa chọn phương pháp đã được chốt, nhờ đó phép đánh giá phản ánh rõ hơn tình huống dùng quá khứ để dự đoán tương lai.
 
 ---
 
-## 1.3. Cơ sở lý thuyết về hệ thống gợi ý đa phương thức
+## 1.3. Cơ sở lý thuyết về gợi ý đa phương thức có xét đến thời gian
 
-### 1.3.1. Gợi ý tuần tự và mô hình User Tower
-Các mô hình gợi ý truyền thống thường giả định sở thích người dùng là tĩnh. Tuy nhiên, hành vi mua sắm thực tế mang tính tuần tự cao (ví dụ: mua giày chạy bộ thường dẫn đến việc mua tất thể thao hoặc quần áo thể thao).
+### 1.3.1. Mô hình hóa sở thích từ lịch sử tương tác
 
-- **Kiến trúc SASRec (Self-Attention Sequential Recommendation)**:
-  Được Kang và McAuley đề xuất năm 2018, SASRec áp dụng cơ chế tự chú ý (Self-Attention) từ Transformer để mô hình hóa chuỗi tương tác tuần tự $S_u = (i_1, i_2, \dots, i_t)$:
-  
-  $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V$$
-  
-  Trong đó ma trận truy vấn $Q$, khóa $K$ và giá trị $V$ được biến đổi tuyến tính từ ma trận nhúng chuỗi sản phẩm cộng với vector vị trí (*Positional Embedding*). Mặt nạ nhân quả (*Causal Mask*) được áp dụng để đảm bảo dự đoán tại bước $t$ chỉ dựa vào các hành vi từ bước $t$ trở về trước.
+Sở thích của người dùng vừa có thành phần tương đối ổn định, vừa thay đổi theo nhu cầu gần đây. Vì vậy, lịch sử mua sắm có thể được xem là một chuỗi có thứ tự $H_u^{<t}=((i_1,t_1),\ldots,(i_n,t_n))$, với $t_j<t$ là thời điểm dự đoán. Một mô hình gợi ý tạo biểu diễn người dùng $q_u(t)=f(H_u^{<t})$ để tóm tắt thông tin cần thiết cho việc so sánh với các sản phẩm. Hàm $f$ có thể là phép tổng hợp có trọng số, mạng hồi quy hoặc cơ chế tự chú ý. Chẳng hạn, tổng hợp có trọng số gán mức ảnh hưởng khác nhau cho các giao dịch trong lịch sử: $q_u(t)=\big(\sum_j w_jv_{i_j}\big)/\big(\sum_j w_j\big)$, trong đó $w_j\geq0$ và $v_{i_j}$ là biểu diễn của sản phẩm đã mua. Trọng số theo độ mới là một giả thuyết mô hình hóa; không phải mọi hành vi gần đây đều quan trọng hơn hành vi cũ đối với mọi người dùng.
 
-- **Kiến trúc Two-Tower (Hai tháp)**:
-  ```
-  User Action Sequence (i_1, i_2, ..., i_t) ──► [ User Tower (SASRec) ] ──► h_user (128-d)
-                                                                                  │ (Dot Product)
-  Candidate Item i                           ──► [ Item Representation ] ──► e_i    (128-d)
-                                                                                  ▼
-                                                                             Score(u, i)
-  ```
-  - **User Tower**: Tiếp nhận chuỗi sản phẩm người dùng đã tương tác, nén thông tin qua các khối Self-Attention để tạo ra vector đại diện người dùng $h_{user}(u) \in \mathbb{R}^{d_{model}}$.
-  - **Item Representation**: Đại diện cho từng sản phẩm $e_i \in \mathbb{R}^{d_{model}}$.
-  - Điểm tương thích giữa người dùng $u$ và sản phẩm $i$ được tính bằng tích vô hướng: $\text{Score}(u, i) = h_{user}(u) \cdot e_i$.
+Các mô hình tuần tự như SASRec dùng cơ chế tự chú ý để học quan hệ giữa những vị trí trong chuỗi và lựa chọn sản phẩm tiếp theo ([Kang và McAuley, 2018](https://arxiv.org/abs/1808.09781)). Một hướng khác là kiến trúc hai tháp: tháp người dùng tạo $q_u(t)$, tháp sản phẩm tạo $v_i$, sau đó tính điểm tương thích $s(u,i,t)=q_u(t)^\top v_i$. Nếu cả hai vector được chuẩn hóa theo chuẩn $L_2$, tích vô hướng bằng độ tương đồng cosine. Khi huấn luyện từ giao dịch mua, mô hình thường so sánh sản phẩm đã mua với các sản phẩm được lấy mẫu nhưng chưa quan sát thấy giao dịch; các sản phẩm lấy mẫu này là đối chứng cho mục tiêu học, không phải bằng chứng người dùng không thích chúng ([Hu và cộng sự, 2008](https://yifanhu.net/PUB/cf.pdf)).
 
-### 1.3.2. Biểu diễn đa phương thức và mô hình CLIP
-Mô hình **CLIP (Contrastive Language-Image Pre-training)** do Radford et al. (OpenAI, 2021) giới thiệu đã tạo nên một chuẩn mực mới trong học biểu diễn thị giác - ngôn ngữ liên kết:
-- **Nguyên lý của CLIP**: Sử dụng cơ chế học tương phản (*Contrastive Learning*) trên hàng trăm triệu cặp ảnh - văn bản trên Internet. Mô hình tối đa hóa độ tương đồng cosine giữa vector ảnh và vector văn bản của cùng một đối tượng, đồng thời giảm thiểu độ tương đồng giữa các cặp không khớp.
-- **Kiến trúc Jina CLIP v2**: Đề tài ứng dụng mô hình `jinaai/jina-clip-v2` sử dụng mạng thị giác EVA-02 ViT-L/14 kết hợp bộ mã hóa văn bản đa ngôn ngữ hiện đại, ánh xạ mọi sản phẩm thành các vector nhúng chuẩn hóa $D = 1024$ chiều trên mặt cầu siêu cầu $L_2 = 1.0$.
-- **Cơ chế biểu diễn sản phẩm lai giải quyết Cold-start**:
-  Trong SASRec truyền thống, ma trận nhúng sản phẩm được khởi tạo ngẫu nhiên theo ID: $e_i = \text{Embedding}(i)$. Khi một sản phẩm không có tương tác trong tập huấn luyện (cold-start), vector của nó sẽ mãi là nhiễu ngẫu nhiên.
-  
-  Để khắc phục triệt để, đề tài thiết kế cơ chế nhúng lai kết hợp phần dư:
-  
-  $$e_i = e_i^{id} + W_{proj} \cdot \mathbf{v}_{clip}(i)$$
-  
-  Trong đó:
-  - $e_i^{id}$ là vector phần dư khởi tạo bằng $0$, chỉ cập nhật khi sản phẩm có tương tác mua hàng trong tập train.
-  - $\mathbf{v}_{clip}(i) \in \mathbb{R}^{1024}$ là vector đặc trưng nội dung (ảnh và mô tả) cố định từ CLIP.
-  - $W_{proj} \in \mathbb{R}^{d_{model} \times 1024}$ là ma trận chiếu tuyến tính được huấn luyện chung với mạng User Tower.
-  
-  Khi sản phẩm hoàn toàn mới ($e_i^{id} = 0$), biểu diễn $e_i$ chính là hình chiếu nội dung ngữ nghĩa của nó, giúp hệ thống gợi ý chính xác mà không cần chờ dữ liệu tương tác lịch sử.
+### 1.3.2. Biểu diễn sản phẩm từ định danh, văn bản và hình ảnh
 
-### 1.3.3. Kiến trúc gợi ý hai giai đoạn (Two-Stage Recommendation)
-Trong môi trường công nghiệp với hàng trăm nghìn hoặc hàng triệu sản phẩm, việc chấm điểm toàn bộ danh mục bằng một mạng nơ-ron phức tạp là bất khả thi về mặt độ trễ thời gian thực. Do đó, kiến trúc hai giai đoạn là tiêu chuẩn vàng:
-1. **Giai đoạn 1: Truy hồi ứng viên (Candidate Retrieval)**:
-   - Mục tiêu: Từ toàn bộ danh mục sản phẩm lớn ($N \ge 32.557 \dots 152.086$), sử dụng các thuật toán tính toán nhanh ($O(1)$ hoặc $O(N \cdot d)$ qua Approximate Nearest Neighbor / tích vô hướng song song) để trích xuất ra một tập nhỏ ứng viên tiềm năng ($K \approx 1000 \dots 2000$).
-   - Các nguồn ứng viên: Kết hợp đa nguồn gồm User Tower (cá nhân hóa chuỗi), Global Popularity (xu hướng đại chúng), Content Centroid (tâm cụm nội dung CLIP gần đây) và Last-item Similarity (sản phẩm tương tự món đồ vừa xem).
-2. **Giai đoạn 2: Xếp hạng lại (Reranking)**:
-   - Mục tiêu: Tiếp nhận danh sách ứng viên nhỏ được truy hồi, áp dụng mô hình phức tạp hơn (**Residual Listwise Reranker**) kết hợp nhiều tín hiệu tương quan sâu để xếp hạng lại chính xác danh sách Top-10 / Top-50 hiển thị cho người dùng.
+Biểu diễn dựa trên mã sản phẩm có thể học được tín hiệu cộng tác từ những mặt hàng đã xuất hiện nhiều lần trong lịch sử. Tuy nhiên, khi một sản phẩm mới có ít hoặc chưa có giao dịch, riêng mã định danh không cung cấp đủ thông tin để suy ra sự phù hợp. Tên, mô tả, thuộc tính và ảnh sản phẩm là các nguồn dữ liệu bổ sung. Văn bản có thể thể hiện loại hàng, chất liệu hoặc màu sắc được mô tả; hình ảnh thể hiện những đặc điểm trực quan khó diễn đạt đầy đủ bằng từ ngữ. Công trình VBPR cho thấy đặc trưng ảnh có thể được đưa vào mô hình xếp hạng cá nhân hóa cùng với phản hồi ngầm ([He và McAuley, 2016](https://ojs.aaai.org/index.php/AAAI/article/view/9973)).
+
+Các mô hình thị giác–ngôn ngữ như CLIP học biểu diễn ảnh và văn bản trong một không gian có thể so sánh, dựa trên các cặp ảnh–văn bản khi tiền huấn luyện ([Radford và cộng sự, 2021](https://proceedings.mlr.press/v139/radford21a.html)). Biểu diễn nội dung có thể kết hợp với biểu diễn mã sản phẩm bằng phép cộng, ghép nối hoặc cơ chế học trọng số. Những cách kết hợp này tạo điều kiện sử dụng cả tín hiệu cộng tác lẫn thông tin nội dung, nhưng vẫn cần xử lý trường hợp thiếu ảnh hoặc mô tả. Việc giảm sự phụ thuộc của mô hình vào mã sản phẩm là một hướng ứng phó với dữ liệu thưa; nó không bảo đảm rằng sản phẩm chưa từng được mua sẽ được xếp hạng tốt. Hiệu quả đối với sản phẩm ít tương tác và sản phẩm chưa từng có giao dịch cần được đo riêng.
+
+### 1.3.3. Truy hồi ứng viên, xếp hạng và tín hiệu thời gian
+
+Khi danh mục lớn, hệ gợi ý thường chia quá trình dự đoán thành hai bước. **Truy hồi ứng viên** chọn một tập $C_u(t)$ nhỏ hơn danh mục từ các nguồn như độ tương đồng với sở thích người dùng, mặt hàng phổ biến gần đây hoặc sản phẩm có nội dung gần với lịch sử mua. **Xếp hạng lại** sử dụng nhiều đặc trưng hơn để sắp xếp các ứng viên và lấy danh sách Top-$K$. Cấu trúc truy hồi rồi xếp hạng đã được mô tả trong hệ thống gợi ý quy mô lớn của YouTube ([Covington và cộng sự, 2016](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/)). Khả năng của bước xếp hạng bị giới hạn bởi tập ứng viên: sản phẩm mục tiêu không có trong $C_u(t)$ sẽ không thể xuất hiện ở kết quả cuối.
+
+Với hàng thời trang, mức độ quan tâm và sự hiện diện của sản phẩm trong giao dịch có thể thay đổi theo thời gian. Do đó, độ phổ biến trong một khoảng gần đây, thời điểm sản phẩm bắt đầu xuất hiện và lịch sử mua lại có thể là tín hiệu bổ sung cho điểm phù hợp cá nhân. Các thống kê này phải được tính từ dữ liệu có trước thời điểm cần dự đoán; dùng giao dịch của giai đoạn đích sẽ gây rò rỉ thông tin. Ở bước xếp hạng lại, mô hình học xếp hạng có thể kết hợp điểm truy hồi, tín hiệu thời gian, độ tương đồng nội dung và mức khớp thuộc tính. LambdaRank là một hướng học xếp hạng sử dụng tín hiệu theo cặp có xét đến thay đổi của thước đo theo vị trí, chẳng hạn NDCG; LambdaMART hiện thực hướng đó bằng cây quyết định tăng cường ([Burges, 2010](https://www.microsoft.com/en-us/research/publication/from-ranknet-to-lambdarank-to-lambdamart-an-overview/)).
+
+Chỉ ưu tiên các mặt hàng đã bán nhiều có thể làm sản phẩm mới ít được hiển thị. Vì thế, ngoài độ chính xác, hệ thống có thể quan tâm đến độ bao phủ danh mục và cơ hội xuất hiện của sản phẩm mới. Những chính sách tăng hiển thị cho nhóm ít dữ liệu tạo ra sự đánh đổi giữa khám phá và độ chính xác của danh sách, cần được báo cáo bằng các thước đo riêng thay vì mặc nhiên xem là cải thiện toàn diện.
 
 ---
 
-## 1.4. Cơ sở lý thuyết về Retrieval-Augmented Generation (RAG)
+## 1.4. Cơ sở lý thuyết về RAG và gợi ý hội thoại
 
-### 1.4.1. Kiến trúc RAG
-Được Lewis et al. công bố năm 2020, kiến trúc **Retrieval-Augmented Generation** kết hợp sức mạnh của hệ thống truy xuất thông tin (*Dense Retrieval*) và mô hình sinh văn bản (*Parametric Generator*):
+### 1.4.1. Truy xuất thông tin để tạo câu trả lời có căn cứ
 
-```
-User Query ──► [ Query Encoder ] ──► Search Vector
-                                           │
-                                           ▼
-                                [ Qdrant Vector DB ]
-                                (Metadata + Reviews)
-                                           │
-                                           ▼
-                           Retrieved Top-k Documents
-                                           │
-                                           ▼
-[ Prompt Construction ] ◄── Context: Metadata, Specs, Reviews [P#], [R#.#]
-        │
-        ▼
-   [ Generator ] (LLM / Validated Template) ──► Grounded Response + Evidence
-```
+RAG (*Retrieval-Augmented Generation*) kết hợp mô hình sinh ngôn ngữ với một nguồn tri thức bên ngoài được truy xuất theo câu hỏi. Trong mô hình gốc, các đoạn thông tin liên quan được truy hồi trước khi tạo câu trả lời, nhờ đó mô hình có thể sử dụng dữ liệu ngoài các tham số đã học ([Lewis và cộng sự, 2020](https://papers.neurips.cc/paper/2020/file/6b493230205f780e1bc26945df7481e5-Paper.pdf)). Đối với trợ lý mua sắm, nguồn tri thức có thể là danh mục sản phẩm, thuộc tính, mô tả và thông tin có thể kiểm tra được về những sản phẩm đang được hỏi. Truy hồi sản phẩm liên quan và truy hồi bằng chứng để trả lời là hai nhu cầu gắn bó nhưng không đồng nhất: một sản phẩm có thể phù hợp để gợi ý, trong khi một khẳng định cụ thể về sản phẩm vẫn cần dữ liệu hỗ trợ.
 
-- **Nguyên lý hoạt động**: Khi nhận câu hỏi, hệ thống chuyển câu hỏi thành vector truy vấn, tìm kiếm trong cơ sở dữ liệu vector các đoạn văn bản có độ tương đồng ngữ nghĩa cao nhất, ghép các đoạn trích này vào ngữ cảnh (*Context*) của Prompt để yêu cầu mô hình sinh câu trả lời.
-- **Ưu điểm vượt trội**:
-  - Không cần tái huấn luyện (*Fine-tuning*) mô hình nền tảng đắt đỏ mỗi khi có sản phẩm mới.
-  - Ngăn ngừa hiện tượng ảo giác (*Hallucination*).
-  - Có khả năng kiểm chứng nguồn gốc thông tin thông qua việc trích dẫn rõ ràng tài liệu tham khảo.
+[Bộ dữ liệu H&M Personalized Fashion Recommendations](https://www.kaggle.com/c/h-and-m-personalized-fashion-recommendations/overview) cung cấp giao dịch, thuộc tính, mô tả và ảnh sản phẩm nhưng không cung cấp đánh giá văn bản thực của người mua. Vì vậy, câu trả lời dựa trên nguồn này có thể giải thích sự phù hợp về loại hàng, màu sắc hoặc những thuộc tính được ghi nhận, nhưng không thể kết luận về trải nghiệm sau mua nếu không có nguồn độc lập. Tài liệu hoặc nhận xét dùng để minh họa giao diện phải được phân biệt với bằng chứng về chính sản phẩm đang xét.
 
-### 1.4.2. Chatbot RAG hỗ trợ gợi ý và tìm kiếm sản phẩm
-Ứng dụng RAG trong trợ lý mua sắm thời trang đòi hỏi phải mở rộng từ hỏi đáp thông thường sang hệ thống điều phối đa tác vụ:
-- **Phân loại ý định người dùng (Intent Classification)**:
-  - *Search*: Tìm sản phẩm theo thuộc tính, màu sắc, khoảng giá.
-  - *Recommend*: Yêu cầu đề xuất theo ngữ cảnh hoặc lịch sử mua sắm.
-  - *Refine*: Tinh chỉnh điều kiện tìm kiếm trên tập ứng viên hiện có mà không cần gọi lại toàn bộ pipeline tìm kiếm vector.
-  - *Explain*: Yêu cầu lý giải vì sao một sản phẩm cụ thể lại được gợi ý.
-  - *Compare*: Đối chiếu thuộc tính, ưu điểm và nhược điểm giữa hai sản phẩm dựa trên nhận xét thực tế của người dùng khác.
-- **Kiểm soát ảo giác nghiêm ngặt (Groundedness Guardrails)**:
-  - Mọi thông tin về giá thành phải khớp 100% với giá lưu trong cơ sở dữ liệu.
-  - Mỗi nhận định về chất lượng sản phẩm phải được bảo chứng bằng mã trích dẫn review cụ thể (ví dụ: `[R1.2]`).
-  - Khi dữ liệu không đủ (ví dụ sản phẩm chưa có review), hệ thống phải thành thật trả lời "Chưa có đủ thông tin nhận xét" thay vì tự suy đoán.
+### 1.4.2. Bộ nhớ sở thích và giới hạn của phản hồi sinh
+
+Hệ gợi ý hội thoại khai thác những gì người dùng diễn đạt qua nhiều lượt để bổ sung hoặc điều chỉnh hồ sơ sở thích ([Gao và cộng sự, 2021](https://arxiv.org/abs/2101.09459)). Bộ nhớ sở thích có thể lưu các ràng buộc đang có hiệu lực, sản phẩm người dùng quan tâm và phản hồi thích hoặc không thích. Khi được đưa trở lại truy hồi và xếp hạng, thông tin này có thể làm thay đổi danh sách đề xuất. Đây là thành phần mở rộng của kiến trúc trợ lý gợi ý; RAG theo định nghĩa gốc không tự tạo ra một bộ nhớ sở thích bền vững. Cần phân biệt phản hồi không thích do người dùng chủ động cung cấp với việc không thấy một giao dịch mua trong dữ liệu lịch sử.
+
+Việc cung cấp ngữ cảnh truy xuất cho mô hình sinh không bảo đảm mọi câu trả lời đều đúng. Một câu trả lời **có căn cứ** cần có các khẳng định được hỗ trợ bởi dữ liệu liên quan và không suy diễn vượt quá nội dung được cung cấp. Ví dụ, màu sắc có thể đối chiếu với thuộc tính hoặc ảnh sản phẩm, còn nhận định “chất lượng tốt hơn” cần loại bằng chứng khác và không thể rút ra chỉ từ ảnh. Hệ thống cần nhận biết thông tin thiếu, nêu giới hạn khi so sánh và có cách phản hồi phù hợp khi không đủ bằng chứng. Đánh giá RAG vì vậy phải xem xét riêng chất lượng truy xuất và độ trung thực của câu trả lời so với ngữ cảnh ([Es và cộng sự, 2024](https://aclanthology.org/2024.eacl-demo.16/)).
 
 ---
 
 ## 1.5. Phương pháp đánh giá
 
-### 1.5.1. Đánh giá mô hình gợi ý sản phẩm
-Để đảm bảo tính khách quan và chuẩn mực học thuật, mô hình được đánh giá theo giao thức **Full-Ranking trên toàn bộ danh mục sản phẩm** (không dùng lấy mẫu ngẫu nhiên 99 hay 100 negative mẫu giả tạo). Trước khi xếp hạng, toàn bộ sản phẩm người dùng đã tương tác trong tập huấn luyện đều bị loại bỏ (`exclude_seen = True`).
+### 1.5.1. Đánh giá danh sách gợi ý theo thời gian
 
-Các chỉ số định lượng bao gồm:
-1. **Candidate Recall**:
-   Đo lường tỷ lệ sản phẩm mục tiêu (Ground Truth item) nằm trong tập $K$ ứng viên được truy hồi từ tầng 1:
-   
-   $$\text{Candidate Recall} = \frac{1}{|\mathcal{U}_{test}|} \sum_{u \in \mathcal{U}_{test}} \mathbb{I}(y_u \in \mathcal{C}_u)$$
-   
-   Trong đó $y_u$ là sản phẩm thực tế người dùng tương tác, $\mathcal{C}_u$ là tập ứng viên của người dùng $u$.
+Đánh giá ngoại tuyến sử dụng các giao dịch trong tương lai làm mục tiêu để kiểm tra danh sách được tạo từ dữ liệu quá khứ. Với một mốc thời gian $t$, gọi $T_u(t)$ là tập sản phẩm người dùng $u$ mua trong giai đoạn đích, $R_K(u,t)$ là danh sách $K$ sản phẩm được gợi ý và $U^+$ là tập người dùng có ít nhất một sản phẩm mục tiêu. Cần xác định rõ cách chọn $U^+$, độ dài giai đoạn đích, danh mục ứng viên và việc có cho phép mua lặp lại hay không, vì các lựa chọn này ảnh hưởng trực tiếp đến ý nghĩa của điểm số. Chia theo mốc thời gian chung giúp hạn chế việc mô hình học từ giao dịch xảy ra sau thời điểm dự đoán ([Ji và cộng sự, 2020](https://arxiv.org/abs/2010.11060)).
 
-2. **Hit Rate tại Top-$K$ (HR@$K$)**:
-   Đo lường tỷ lệ người dùng có sản phẩm mục tiêu xuất hiện trong Top-$K$ vị trí đầu tiên của danh sách gợi ý:
-   
-   $$\text{HR@}K = \frac{1}{|\mathcal{U}_{test}|} \sum_{u \in \mathcal{U}_{test}} \mathbb{I}(\text{rank}(u, y_u) \le K)$$
+Với nhiều sản phẩm mục tiêu cho mỗi người dùng, các chỉ số Top-$K$ thường dùng gồm:
 
-3. **Normalized Discounted Cumulative Gain (NDCG@$K$)**:
-   Đo lường chất lượng xếp hạng có tính đến vị trí xuất hiện của sản phẩm mục tiêu (sản phẩm đúng xuất hiện ở vị trí càng cao thì điểm số càng lớn):
-   
-   $$\text{DCG@}K = \sum_{r=1}^K \frac{2^{\text{rel}_r} - 1}{\log_2(r + 1)}$$
-   
-   $$\text{NDCG@}K = \frac{\text{DCG@}K}{\text{IDCG@}K}$$
-   
-   Với bài toán Leave-one-out ($\text{rel} \in \{0, 1\}$), $\text{IDCG@}K = 1$, do đó nếu sản phẩm đúng nằm ở vị trí thứ $r \le K$ thì $\text{NDCG@}K = \frac{1}{\log_2(r + 1)}$, ngược lại bằng 0.
+$$\mathrm{HitRate@}K=\frac{1}{|U^+|}\sum_{u\in U^+}\mathbf{1}\big[R_K(u,t)\cap T_u(t)\ne\varnothing\big],$$
 
-### 1.5.2. Đánh giá Chatbot RAG
-Hệ thống Chatbot RAG được đánh giá trên cả phương diện kỹ thuật và trải nghiệm đàm thoại:
-- **Độ chính xác phân loại ý định (Intent Accuracy)**: Tỷ lệ các câu truy vấn tự nhiên tiếng Việt và tiếng Anh được gán đúng hành động nghiệp vụ.
-- **Hiệu năng truy xuất ngữ cảnh (Context Retrieval Quality)**: Khả năng lọc đúng các sản phẩm liên quan và các đánh giá giàu thông tin nhất.
-- **Tính có căn cứ (Groundedness / Faithfulness)**: Tỷ lệ các câu khẳng định trong phản hồi có bằng chứng hỗ trợ trực tiếp từ tài liệu trích dẫn; tỷ lệ ảo giác thông tin giá cả phải bằng $0\%$.
-- **Độ trễ thời gian phản hồi (Response Latency)**: Đo lường thời gian trích xuất vector, tìm kiếm trên Qdrant và sinh câu trả lời trên các cấu hình phần cứng khác nhau (GPU vs CPU).
-- **Cơ chế suy giảm có kiểm soát (Graceful Degradation)**: Khả năng hệ thống tự động kích hoạt bộ sinh phản hồi dựa trên mẫu khuôn định sẵn (Template Fallback) khi dịch vụ LLM gặp sự cố hoặc thời gian chờ quá tải.
+$$\mathrm{Recall@}K=\frac{1}{|U^+|}\sum_{u\in U^+}\frac{|R_K(u,t)\cap T_u(t)|}{|T_u(t)|}.$$
+
+HitRate đo tỷ lệ người dùng có ít nhất một sản phẩm mua nằm trong danh sách; Recall đo phần mục tiêu được tìm thấy. Để xét vị trí, đặt $\mathrm{rel}_{u,r}=1$ nếu sản phẩm ở hạng $r$ thuộc $T_u(t)$, ngược lại bằng $0$. Khi đó:
+
+$$\mathrm{DCG@}K(u)=\sum_{r=1}^{K}\frac{\mathrm{rel}_{u,r}}{\log_2(r+1)},\qquad
+\mathrm{NDCG@}K=\frac{1}{|U^+|}\sum_{u\in U^+}\frac{\mathrm{DCG@}K(u)}{\mathrm{IDCG@}K(u)}.$$
+
+$\mathrm{IDCG@}K(u)$ là điểm DCG khi tối đa $\min(K,|T_u(t)|)$ sản phẩm mục tiêu đứng ở các vị trí đầu. Một chỉ số khác là $\mathrm{MAP@}K$, trung bình của $\mathrm{AP@}K(u)=\sum_{r=1}^{K}\mathrm{P@}r(u)\,\mathrm{rel}_{u,r}/\min(K,|T_u(t)|)$, trong đó $\mathrm{P@}r(u)$ là tỷ lệ sản phẩm đúng trong $r$ vị trí đầu. NDCG và MAP đều quan tâm đến thứ tự, nhưng sử dụng cách chiết khấu vị trí khác nhau.
+
+Ở hệ gợi ý nhiều giai đoạn, **Candidate Recall** đo tỷ lệ mục tiêu xuất hiện trong tập ứng viên trước khi xếp hạng và là giới hạn trên của Recall cuối cùng nếu các bước sau chỉ sắp xếp tập đó. **Độ bao phủ danh mục** đo tỷ lệ sản phẩm khác nhau được hiển thị qua nhiều người dùng; nên báo thêm kết quả theo nhóm sản phẩm đã có tương tác, sản phẩm chưa thấy trong tập huấn luyện và sản phẩm chưa từng có giao dịch trước mốc dự đoán. Các nhóm “cold” này có ý nghĩa khác nhau và không nên gộp thành một con số.
+
+Kết quả chính nên được đo trên danh mục ứng viên được xác định nhất quán tại thời điểm dự đoán, đồng thời so sánh với các đường cơ sở như phổ biến toàn thời gian và phổ biến gần đây. Phép đánh giá dùng một mục tiêu cùng một số ít sản phẩm lấy mẫu có thể phục vụ phân tích phụ, nhưng điểm số của nó phụ thuộc mạnh vào cách lấy mẫu và không so sánh trực tiếp với xếp hạng toàn danh mục. Khi so sánh hai phương pháp trên cùng người dùng, có thể lấy mẫu lại theo người dùng để ước lượng khoảng tin cậy cho **chênh lệch chỉ số**; khoảng tin cậy và độ lớn cải thiện cần được đọc cùng nhau ([Cañamares và cộng sự, 2020](https://doi.org/10.1007/s10791-020-09371-3)).
+
+### 1.5.2. Đánh giá trợ lý hội thoại và RAG
+
+Chất lượng trợ lý cần được xem xét ở nhiều bước: hiểu đúng ý định và ràng buộc của người dùng; truy xuất đúng sản phẩm, thuộc tính và nguồn thông tin liên quan; duy trì nhất quán sở thích qua các lượt; và tạo câu trả lời đáp ứng yêu cầu mà không đưa ra khẳng định thiếu căn cứ. Độ chính xác truy xuất có thể đo bằng bộ câu hỏi có sản phẩm hoặc thuộc tính liên quan đã được gán nhãn. Độ trung thực của câu trả lời cần đối chiếu từng khẳng định với thông tin truy xuất, nhất là giá, màu sắc và các so sánh giữa sản phẩm. Cũng cần đánh giá khả năng từ chối kết luận khi thiếu dữ liệu, thời gian phản hồi và hành vi dự phòng khi một thành phần không sẵn sàng ([Es và cộng sự, 2024](https://aclanthology.org/2024.eacl-demo.16/)).
+
+Đối với bộ nhớ sở thích, một phép đánh giá riêng có thể kiểm tra liệu phản hồi người dùng có làm thay đổi kết quả theo đúng hướng và liệu hệ thống còn ghi nhớ ràng buộc ở các lượt sau. Chỉ số gợi ý tính từ giao dịch lịch sử không đủ để chứng minh người dùng hài lòng với đối thoại; đánh giá mô phỏng và kiểm thử chức năng cần được phân biệt với phản hồi từ người dùng thật.
 
 ---
 
-## 1.6. Công nghệ và công cụ sử dụng
+## 1.6. Nền tảng công nghệ liên quan
 
-### 1.6.1. Công nghệ xử lý dữ liệu, huấn luyện và triển khai mô hình
-- **Ngôn ngữ lập trình**: **Python 3.10.9** – ngôn ngữ tiêu chuẩn công nghiệp trong khoa học dữ liệu và học máy.
-- **Framework Học sâu**: **PyTorch 2.9.1+cu126** kết hợp CUDA 12.6, cung cấp nền tảng tính toán tensor hiệu năng cao trên GPU, tự động tính đạo hàm và tối ưu hóa mạng nơ-ron sâu.
-- **Công cụ xử lý dữ liệu lớn**:
-  - **Polars & DuckDB**: Các công cụ xử lý dữ liệu thế hệ mới dựa trên kiến trúc Apache Arrow, đa luồng song song vượt trội so với Pandas truyền thống khi xử lý hàng triệu bản ghi đánh giá Amazon.
-  - **Apache Parquet**: Định dạng lưu trữ dữ liệu dạng cột nén cao cấp, tối ưu hóa tốc độ I/O và đảm bảo toàn vẹn kiểu dữ liệu.
-- **Cơ sở dữ liệu Vector**: **Qdrant 1.12.4** – hệ quản trị cơ sở dữ liệu vector chuyên dụng viết bằng Rust, hỗ trợ cấu trúc Named Vectors, thuật toán tìm kiếm láng giềng gần xấp xỉ HNSW (*Hierarchical Navigable Small World*) và lọc thuộc tính thời gian thực với độ trễ phần nghìn giây.
-- **Backend Framework**: **FastAPI** – framework xây dựng RESTful API bất đồng bộ (*Async I/O*) hiệu năng cực cao, tích hợp chuẩn hóa dữ liệu Pydantic và tự động sinh tài liệu OpenAPI/Swagger.
+### 1.6.1. Xử lý dữ liệu, biểu diễn và học xếp hạng
 
-### 1.6.2. Công nghệ phát triển giao diện và quản lý hệ thống
-- **Giao diện người dùng (Frontend)**: **Next.js 14** (React Framework) kết hợp **Tailwind CSS**, xây dựng giao diện sàn thương mại điện tử hiện đại, tối ưu hóa hiển thị hình ảnh sản phẩm và hỗ trợ luồng chat thời gian thực.
-- **Hệ quản trị cơ sở dữ liệu nghiệp vụ**: **PostgreSQL 16** kết hợp **SQLAlchemy ORM** và **Alembic**, quản lý an toàn dữ liệu người dùng, tài khoản, danh mục, giỏ hàng và đơn hàng mô phỏng.
-- **Đóng gói và Triển khai**: **Docker & Docker Compose**, đóng gói đồng bộ toàn bộ các service (Backend, Recommender, RAG, Qdrant, PostgreSQL, Web Frontend) thành các container độc lập, đảm bảo khả năng triển khai tức thì trên mọi môi trường máy chủ.
-- **Quản lý mã nguồn và phiên bản**: **Git & GitHub**, tuân thủ nghiêm ngặt quy trình quản lý phiên bản mã nguồn, lưu trữ manifest, checksum và cấu hình thí nghiệm.
+Quy trình nghiên cứu cần công cụ xử lý dữ liệu dạng bảng và định dạng lưu trữ có thể tái sử dụng để xây dựng tập giao dịch theo thời gian. Các thư viện tính toán tensor hỗ trợ học biểu diễn người dùng và sản phẩm; mô hình thị giác–ngôn ngữ tạo đặc trưng cho văn bản và ảnh; mô hình học xếp hạng xử lý tập ứng viên với nhiều đặc trưng. Trong đề tài, Polars, DuckDB và Parquet phục vụ dữ liệu; PyTorch phục vụ mô hình biểu diễn; Jina CLIP v2 cung cấp đặc trưng đa phương thức; LightGBM phục vụ xếp hạng lại. Jina CLIP v2 hỗ trợ biểu diễn ảnh và văn bản trong cùng không gian và rút gọn chiều biểu diễn theo nguyên lý Matryoshka ([Koukounas và cộng sự, 2024](https://arxiv.org/abs/2412.08802); [Kusupati và cộng sự, 2022](https://papers.nips.cc/paper_files/paper/2022/hash/c32319f4868da7613d78af9993100e42-Abstract-Conference.html)). Việc chọn chiều vector, tham số và phiên bản cụ thể thuộc phần phương pháp triển khai.
+
+### 1.6.2. Truy xuất và cung cấp dịch vụ
+
+Cơ sở dữ liệu vector hỗ trợ truy hồi sản phẩm theo độ gần của biểu diễn văn bản hoặc hình ảnh và có thể kết hợp với bộ lọc thuộc tính. Cơ sở dữ liệu quan hệ lưu các thực thể nghiệp vụ và lịch sử tương tác; dịch vụ API nối giao diện với bộ gợi ý và trợ lý hội thoại. Qdrant, PostgreSQL, FastAPI và Next.js là các công cụ được dùng cho những vai trò tương ứng trong hệ thống. Việc liệt kê chúng ở đây nhằm xác định chức năng của từng nhóm công nghệ; cấu hình, phiên bản và kiến trúc triển khai sẽ được trình bày ở Chương 2.
 
 ---
 
 ## 1.7. Các công trình nghiên cứu liên quan
 
-### 1.7.1. Nghiên cứu về gợi ý tuần tự và gợi ý đa phương thức
-- **SASRec (Kang & McAuley, 2018)**: Đặt nền móng cho việc đưa kiến trúc Self-Attention vào bài toán gợi ý tuần tự, vượt trội hoàn toàn so với các mạng nơ-ron hồi quy RNN (GRU4Rec) và mạng tích chập CNN (Caser) cả về độ chuẩn xác lẫn tốc độ tính toán song song. Tuy nhiên, SASRec nguyên bản chỉ khai thác ID sản phẩm, dẫn đến bất lợi lớn trước bài toán cold-start.
-- **CLIP (Radford et al., 2021)**: Mở ra kỷ nguyên biểu diễn liên kết đa phương thức không giám sát quy mô lớn, chứng minh rằng không gian vector kết hợp giữa ảnh và văn bản có tính chất ngữ nghĩa phong phú và khả năng tổng quát hóa zero-shot vượt bậc.
-- **Các nghiên cứu gợi ý đa phương thức gần đây (MMRec, VBPR, multimodal SASRec)**: Đã có những nỗ lực đưa đặc trưng ảnh vào hệ thống gợi ý, song phần lớn tiếp cận theo hướng ghép nối vector muộn (*Late Fusion*) ở mức vector hoặc chỉ sử dụng các mạng thị giác cũ như ResNet-50. Đề tài kế thừa các bài học này, khắc phục lỗi logic trong ghép nối vector, và ứng dụng trực tiếp mô hình thị giác hiện đại EVA-02 ViT-L/14 qua Jina CLIP v2 kết hợp cơ chế phần dư $id\_residual$.
+### 1.7.1. Mô hình hóa hành vi và nội dung sản phẩm
 
-### 1.7.2. Nghiên cứu về Retrieval-Augmented Generation
-- **RAG (Lewis et al., 2020)**: Công trình tiên phong khẳng định việc kết hợp bộ truy xuất thông tin không gian vector với mô hình tạo sinh ngôn ngữ giúp giải quyết căn bệnh ảo giác của các mô hình nơ-ron tạo sinh, cho phép cập nhật tri thức động mà không cần tái huấn luyện.
-- **Các hệ thống trợ lý mua sắm hội thoại (Conversational Recommender Systems - CRS)**: Các hệ thống CRS thời kỳ đầu thường dựa trên đồ thị tri thức cứng (*Knowledge Graph*) hoặc câu hỏi dạng cây quyết định đóng, gây cảm giác gò bó cho khách hàng. Sự xuất hiện của LLM kết hợp RAG tạo điều kiện xây dựng trải nghiệm đối thoại mở tự nhiên, vừa thấu hiểu ngôn từ phức tạp, vừa đảm bảo câu trả lời được neo chặt vào catalog thực tế.
+[Kang và McAuley (2018)](https://arxiv.org/abs/1808.09781) đề xuất SASRec để dự đoán sản phẩm tiếp theo từ chuỗi tương tác bằng cơ chế tự chú ý. Công trình cho thấy lịch sử có thứ tự chứa thông tin mà một hồ sơ người dùng tĩnh có thể bỏ qua; việc dùng kiến trúc chú ý hay phép tổng hợp nhẹ hơn vẫn là lựa chọn cần đánh giá theo dữ liệu và điều kiện tính toán. [He và McAuley (2016)](https://ojs.aaai.org/index.php/AAAI/article/view/9973) đưa đặc trưng ảnh vào xếp hạng cá nhân hóa từ phản hồi ngầm, đặt cơ sở cho việc khai thác vẻ ngoài của sản phẩm thời trang. [Radford và cộng sự (2021)](https://proceedings.mlr.press/v139/radford21a.html) trình bày cách học biểu diễn ảnh–văn bản bằng học tương phản; các mô hình kế thừa như [Jina CLIP v2](https://arxiv.org/abs/2412.08802) mở rộng khả năng truy hồi đa phương thức. Những công trình này hỗ trợ lựa chọn nguồn đặc trưng, nhưng không tự chứng minh việc kết hợp chúng cải thiện kết quả trên H&M.
+
+### 1.7.2. Truy hồi ứng viên và học xếp hạng
+
+[Covington và cộng sự (2016)](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) mô tả hệ gợi ý có bước tạo ứng viên và bước xếp hạng riêng, một cách tổ chức hữu ích khi danh mục lớn. [Burges (2010)](https://www.microsoft.com/en-us/research/publication/from-ranknet-to-lambdarank-to-lambdamart-an-overview/) tổng hợp LambdaRank và LambdaMART, giải thích cách học xếp hạng có xét đến thước đo theo vị trí. [Ke và cộng sự (2017)](https://papers.neurips.cc/paper_files/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html) giới thiệu LightGBM như một phương pháp cây quyết định tăng cường hiệu quả trên dữ liệu dạng bảng. Trong bài toán thời trang theo thời gian, các hướng này gợi ý việc kết hợp điểm cá nhân hóa với đặc trưng sản phẩm và thống kê gần thời điểm dự đoán; giá trị thực tế của từng nguồn phải được kiểm tra bằng đối chứng phù hợp.
+
+### 1.7.3. Gợi ý hội thoại và sinh câu trả lời có căn cứ
+
+[Gao và cộng sự (2021)](https://arxiv.org/abs/2101.09459) hệ thống hóa các bài toán của gợi ý hội thoại, gồm thu nhận sở thích, chiến lược đối thoại nhiều lượt và đánh giá trải nghiệm. [Lewis và cộng sự (2020)](https://papers.neurips.cc/paper/2020/file/6b493230205f780e1bc26945df7481e5-Paper.pdf) đặt nền tảng cho RAG bằng cách kết hợp truy hồi nguồn tri thức ngoài với sinh văn bản. [Es và cộng sự (2024)](https://aclanthology.org/2024.eacl-demo.16/) nhấn mạnh cần đánh giá riêng độ liên quan của ngữ cảnh và độ trung thực của câu trả lời. Đề tài kết nối các hướng này qua bộ nhớ sở thích dùng cho gợi ý và dữ liệu sản phẩm dùng cho giải thích, đồng thời giới hạn những khẳng định không có bằng chứng trong dữ liệu H&M.
 
 ---
 
 ## 1.8. Tổng kết chương
 
-Chương 1 đã thiết lập toàn diện bức tranh cơ sở khoa học và lý luận vững chắc cho đề tài:
-1. Phân tích chi tiết bài toán gợi ý sản phẩm cá nhân hóa trong thương mại điện tử, chỉ rõ các thách thức cố hữu về dữ liệu thưa, phân phối đuôi dài và khởi đầu lạnh.
-2. Trình bày nền tảng lý thuyết về xử lý dữ liệu tuần tự, giải thuật lọc lặp $K$-core và chiến lược chia tập dữ liệu chống rò rỉ theo dòng thời gian.
-3. Làm rõ các nguyên lý cốt lõi của mạng gợi ý tuần tự SASRec, mô hình biểu diễn đa phương thức CLIP và giải pháp kiến trúc hai giai đoạn kết hợp truy hồi đa nguồn.
-4. Tổng quan kiến trúc Retrieval-Augmented Generation (RAG) và các tiêu chuẩn kiểm soát ảo giác thông tin trong trợ lý đàm thoại mua sắm.
-5. Xác định hệ thống chỉ số đánh giá định lượng khoa học và tổng hợp hệ sinh thái công nghệ hiện đại được ứng dụng trong đồ án.
-
-Những cơ sở lý luận này là tiền đề trực tiếp để bước sang **Chương 2**, nơi toàn bộ quy trình thiết kế, hiện thực hóa kỹ thuật và triển khai kiến trúc hệ thống sẽ được trình bày tường minh.
+Chương 1 đã trình bày bài toán gợi ý sản phẩm từ lịch sử giao dịch và nội dung đa phương thức, các nguyên tắc xử lý dữ liệu theo thời gian, kiến trúc truy hồi–xếp hạng, cùng vai trò của bộ nhớ sở thích và RAG trong trợ lý mua sắm. Chương cũng xác định cách đánh giá danh sách Top-$K$ và câu trả lời có căn cứ, đặc biệt là yêu cầu phân biệt tín hiệu mua với phản hồi tiêu cực và tránh dùng thông tin tương lai khi dự đoán. Các nguyên lý này làm nền tảng cho Chương 2, nơi phương pháp và thiết kế cụ thể của hệ thống được trình bày.

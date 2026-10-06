@@ -15,6 +15,9 @@ def format_vnd(value: float | None) -> str:
     return f"{int(round(value)):,}".replace(",", ".") + "₫"
 
 
+AUDIENCE_VI = {"women": "nữ", "men": "nam", "divided": "giới trẻ (Divided)", "kids": "trẻ em", "baby": "em bé", "other": "khác"}
+
+
 @dataclass
 class ProductFact:
     """Everything the model may say about one product. Nothing outside this
@@ -33,6 +36,10 @@ class ProductFact:
     description: str | None
     features: str | None
     image_url: str | None = None
+    audience: str | None = None  # H&M: women | men | divided | kids | baby | other
+    colour: str | None = None
+    product_type: str | None = None
+    reviews_mock: bool = False  # the rating/reviews are demo data borrowed from another catalog
 
     @classmethod
     def from_payload(cls, tag: str, product_id: int, payload: Mapping[str, Any]) -> "ProductFact":
@@ -50,6 +57,10 @@ class ProductFact:
             description=payload.get(S.P_DESCRIPTION),
             features=payload.get(S.P_FEATURES),
             image_url=payload.get(S.P_IMAGE_URL),
+            audience=payload.get(S.P_AUDIENCE),
+            colour=payload.get(S.P_COLOUR),
+            product_type=payload.get(S.P_PRODUCT_TYPE),
+            reviews_mock=bool(payload.get(S.P_REVIEWS_MOCK, False)),
         )
 
     def price_text(self) -> str:
@@ -60,7 +71,8 @@ class ProductFact:
     def rating_text(self) -> str:
         if not self.review_count or self.avg_rating is None:
             return "chưa có đánh giá"
-        return f"{self.avg_rating:.1f}/5 từ {self.review_count} đánh giá"
+        kind = "đánh giá minh hoạ" if self.reviews_mock else "đánh giá"
+        return f"{self.avg_rating:.1f}/5 từ {self.review_count} {kind}"
 
 
 @dataclass
@@ -95,8 +107,13 @@ class EvidenceContext:
             lines.append(f"[NOTE] {note}")
         for fact in self.products:
             lines.append(f"[{fact.tag}] {fact.title}")
-            lines.append(f"  - Thương hiệu: {fact.brand or 'không rõ'}")
-            lines.append(f"  - Loại: {fact.category or 'không rõ'}")
+            if fact.brand:
+                lines.append(f"  - Thương hiệu: {fact.brand}")
+            lines.append(f"  - Loại: {fact.product_type or fact.category or 'không rõ'}")
+            if fact.colour:
+                lines.append(f"  - Màu: {fact.colour}")
+            if fact.audience:
+                lines.append(f"  - Dành cho: {AUDIENCE_VI.get(fact.audience, fact.audience)}")
             lines.append(f"  - Giá: {fact.price_text()}")
             lines.append(f"  - Đánh giá tổng hợp: {fact.rating_text()}")
             if fact.features:
@@ -105,7 +122,8 @@ class EvidenceContext:
                 lines.append(f"  - Mô tả: {fact.description[:max_desc]}")
             for rtag, rev in self.reviews.get(fact.tag, []):
                 title = f"{rev.title} — " if rev.title else ""
-                lines.append(f"  - [{rtag}] ({rev.rating:.0f}★, {rev.helpful_vote} lượt hữu ích) {title}{rev.snippet(300)}")
+                mock = "đánh giá minh hoạ, " if rev.is_mock else ""
+                lines.append(f"  - [{rtag}] ({mock}{rev.rating:.0f}★, {rev.helpful_vote} lượt hữu ích) {title}{rev.snippet(300)}")
             if not self.reviews.get(fact.tag):
                 lines.append("  - (chưa có nhận xét nào của người mua trong dữ liệu)")
         return "\n".join(lines)
@@ -126,6 +144,9 @@ class EvidenceContext:
 
 # ---- grounding checks ------------------------------------------------------------
 _TAG_RE = re.compile(r"\[(P\d+|R\d+\.\d+)\]")
+_ONE_TAG = r"(?:P\d+|R\d+\.\d+)"
+_TAG_LIST = re.compile(rf"{_ONE_TAG}(?:\s*,\s*{_ONE_TAG})*")
+_BRACKET = re.compile(r"\[([PR]\d[^\[\]]{0,80})\]")
 _LINK_RE = re.compile(r"https?://\S+|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|vn|io|co|info|example|xyz|shop|store)\b", re.IGNORECASE)
 _AMOUNT_RE = re.compile(
     r"(?<![\w.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(₫|đồng|đ\b|vnđ|vnd|nghìn|ngàn|k\b|triệu|tr\b)",
@@ -134,7 +155,16 @@ _AMOUNT_RE = re.compile(
 
 
 def extract_citations(text: str) -> set[str]:
-    return set(_TAG_RE.findall(text))
+    tags: set[str] = set()
+    for inner in _BRACKET.findall(text):
+        if _TAG_LIST.fullmatch(inner.strip()):
+            tags.update(re.findall(_ONE_TAG, inner))
+    return tags
+
+
+def malformed_citations(text: str) -> list[str]:
+    """Bracketed groups that start like a citation ("[P5 - *chờ chút, P3 mới đúng*]") but are not a clean tag list."""
+    return [f"[{inner}]" for inner in _BRACKET.findall(text) if not _TAG_LIST.fullmatch(inner.strip())]
 
 
 def _to_vnd(number: str, unit: str) -> float | None:
@@ -161,6 +191,9 @@ def check_grounding(answer: str, ctx: EvidenceContext, tolerance: float = 0.015)
     link/domain that is not in the provided data (typical prompt-injection payload).
     """
     issues: list[str] = []
+    bad_format = malformed_citations(answer)
+    if bad_format:
+        issues.append(f"định dạng trích dẫn không hợp lệ: {bad_format[:3]}")
     unknown = extract_citations(answer) - ctx.valid_tags()
     if unknown:
         issues.append(f"trích dẫn không tồn tại: {sorted(unknown)}")

@@ -199,7 +199,7 @@ def test_session_resolves_ordinals_and_engagement():
     s.engage("A")
     s.engage("A")
     s.engage("B")
-    assert s.focus_history_skus == ["A", "B"]
+    assert [(e.sku, e.kind) for e in s.events] == [("A", "click"), ("B", "click")]
 
 
 # ---- grounding -------------------------------------------------------------------------

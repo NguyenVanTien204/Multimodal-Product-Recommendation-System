@@ -83,7 +83,7 @@ export default function AdminPage() {
         category_id: categoryId,
       });
 
-      showToast("Thêm sản phẩm thành công vào PostgreSQL!", "success");
+      showToast("Thêm sản phẩm thành công!", "success");
       setSku("");
       setName("");
       setDescription("");
@@ -120,7 +120,7 @@ export default function AdminPage() {
           onClick={() => login("admin@shopsense.vn", "adminpassword123")}
           className="w-full py-3.5 rounded-xl font-bold text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all"
         >
-          Đăng Nhập Tài Khoản Admin Mẫu
+          Đăng Nhập Tài Khoản Quản Trị
         </button>
       </div>
     );
@@ -153,13 +153,13 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-2 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Sản Phẩm Trong DB</span>
+            <span>Tổng Sản Phẩm</span>
             <Package className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
             {totalProducts.toLocaleString("vi-VN")}
           </div>
-          <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">PostgreSQL Catalog</span>
+          <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">Đang kinh doanh</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-2 shadow-xs">
@@ -181,19 +181,19 @@ export default function AdminPage() {
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
             {orders.length}
           </div>
-          <span className="text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded">Row-locked transactions</span>
+          <span className="text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded">Đơn hàng hoàn tất</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-2 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Vector DB & Qdrant</span>
+            <span>Tìm Kiếm &amp; Đề Xuất</span>
             <Cpu className="w-4 h-4 text-purple-600" />
           </div>
           <div className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>{health.qdrant ? "Trực Tuyến" : "Chưa kết nối"}</span>
+            <span>Sẵn Sàng</span>
           </div>
-          <span className="text-[11px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded">152k product_embeddings</span>
+          <span className="text-[11px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded">Gợi ý tự động</span>
         </div>
       </div>
 
@@ -206,9 +206,9 @@ export default function AdminPage() {
               <PlusCircle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Thêm Sản Phẩm Mới Vào DB</h3>
+              <h3 className="text-lg font-bold text-slate-900">Thêm Sản Phẩm Mới</h3>
               <p className="text-xs text-slate-500">
-                Thêm trực tiếp vào bảng products của PostgreSQL thông qua API FastAPI
+                Tạo và niêm yết sản phẩm mới vào danh mục bán hàng
               </p>
             </div>
           </div>
@@ -310,7 +310,7 @@ export default function AdminPage() {
               className="w-full py-3.5 rounded-xl font-bold text-xs sm:text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
-                <span>Đang ghi dữ liệu vào PostgreSQL...</span>
+                <span>Đang lưu sản phẩm...</span>
               ) : (
                 <>
                   <PlusCircle className="w-4 h-4" />

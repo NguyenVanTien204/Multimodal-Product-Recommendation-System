@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 import httpx
@@ -11,9 +12,11 @@ from ..catalog.models import Product
 from ..catalog.schemas import ProductOut
 from ..core.config import settings
 from ..core.database import get_db
+from ..preferences.service import forget, load_events, persist_events
 from ..recommendations.service import _recent_product_ids, _skus_for_product_ids
 from .schemas import ChatIn, ChatOut, ChatProductOut, EvidenceOut
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 # First request after start may wait for the query encoder; the LLM adds seconds on top.
@@ -61,6 +64,10 @@ async def chat(payload: ChatIn, user: User | None = Depends(optional_user), db: 
     if not settings.datn_rag_url:
         return _keyword_fallback(db, payload.message, payload.session_id, "DATN_RAG_URL not configured")
 
+    if user and payload.action and payload.action.type == "forget":
+        # The shop DB is the durable copy: delete it first so it is not sent back; the RAG session drops its own copy.
+        forget(db, user, payload.action.product_id)
+
     # Shop-side purchase intent (cart / recent orders) becomes the model's interaction history.
     history_skus = _skus_for_product_ids(db, _recent_product_ids(db, user, limit=10)) if user else []
     body = {
@@ -68,6 +75,8 @@ async def chat(payload: ChatIn, user: User | None = Depends(optional_user), db: 
         "session_id": payload.session_id,
         "image_base64": payload.image_base64,
         "history_skus": history_skus,
+        # Durable taste memory (likes/dislikes/clicks from earlier sessions); the RAG service weighs and decays it.
+        "events": load_events(db, user) if user else [],
         "action": payload.action.model_dump(exclude_none=True) if payload.action else None,
         "filters": payload.filters.model_dump(exclude_none=True) if payload.filters else None,
     }
@@ -82,6 +91,13 @@ async def chat(payload: ChatIn, user: User | None = Depends(optional_user), db: 
         raise
     except Exception as exc:  # noqa: BLE001
         return _keyword_fallback(db, payload.message, payload.session_id, str(exc)[:120])
+
+    if user and data.get("events"):
+        try:
+            persist_events(db, user, data["events"])
+        except Exception:  # noqa: BLE001 - remembering feedback must never break the chat answer
+            db.rollback()
+            log.exception("could not persist preference events")
 
     ids = [p["product_id"] for p in data.get("products", [])]
     rows = {p.id: p for p in db.scalars(select(Product).where(Product.id.in_(ids), Product.is_active.is_(True)))} if ids else {}
@@ -98,8 +114,12 @@ async def chat(payload: ChatIn, user: User | None = Depends(optional_user), db: 
                 price_estimated=item.get("price_estimated", False),
                 avg_rating=item.get("avg_rating"),
                 review_count=item.get("review_count", 0),
+                reviews_mock=item.get("reviews_mock", False),
+                audience=item.get("audience"),
+                colour=item.get("colour"),
+                product_type=item.get("product_type"),
                 reasons=item.get("reasons", []),
-                evidence=[EvidenceOut(**{k: e.get(k) for k in EvidenceOut.model_fields}) for e in item.get("evidence", [])],
+                evidence=[EvidenceOut(**{k: e[k] for k in EvidenceOut.model_fields if k in e}) for e in item.get("evidence", [])],
             )
         )
     return ChatOut(

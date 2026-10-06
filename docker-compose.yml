@@ -51,6 +51,8 @@ services:
     environment:
       DATN_DATA_DIR: /data
       DATN_DEVICE: ${RECOMMENDER_DEVICE:-cpu}
+      # "amazon" (legacy checkpoint) or "hm" (H&M tower + LightGBM reranker, needs data/hm/serving)
+      DATN_ENGINE: ${DATN_ENGINE:-amazon}
       # Native BLAS/Torch pools otherwise reserve one arena per CPU core.
       MALLOC_ARENA_MAX: "2"
       OMP_NUM_THREADS: ${ML_NUM_THREADS:-2}
@@ -87,6 +89,11 @@ services:
       RAG_QDRANT_URL: http://qdrant:6333
       RAG_RECOMMENDER_URL: http://recommender:8100
       RAG_DEVICE: ${RECOMMENDER_DEVICE:-cpu}
+      # Catalog selection (defaults = Amazon). H&M: hm_products / hm_reviews / 512 / sold_28d -- see deploy/azure/README.md
+      DATN_PRODUCTS_COLLECTION: ${DATN_PRODUCTS_COLLECTION:-products}
+      DATN_REVIEWS_COLLECTION: ${DATN_REVIEWS_COLLECTION:-reviews}
+      DATN_VECTOR_SIZE: ${DATN_VECTOR_SIZE:-1024}
+      DATN_POPULARITY_KEY: ${DATN_POPULARITY_KEY:-review_count}
       # LLM (optional; empty => deterministic answers built from the data). Put these in ./.env, see .env.example.
       # Gemini: RAG_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai, RAG_LLM_MODEL=gemini-3.5-flash-lite
       RAG_LLM_BASE_URL: ${RAG_LLM_BASE_URL:-}
@@ -122,9 +129,12 @@ services:
     restart: unless-stopped
     mem_limit: ${BACKEND_MEMORY_LIMIT:-512m}
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:-mini_market_secret_pass_2026}@postgres:5432/${POSTGRES_DB:-mini_market}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:-mini_market_secret_pass_2026}@postgres:5432/${BACKEND_DB:-${POSTGRES_DB:-mini_market}}
       JWT_SECRET: ${JWT_SECRET:-shopsense-datn-super-secret-jwt-key-2026-secure}
       QDRANT_URL: http://qdrant:6333
+      # H&M catalog: QDRANT_PRODUCT_COLLECTION=hm_product_embeddings, HM_IMAGE_DIR=/hm_images (see deploy/azure/README.md)
+      QDRANT_PRODUCT_COLLECTION: ${QDRANT_PRODUCT_COLLECTION:-product_embeddings}
+      HM_IMAGE_DIR: ${HM_IMAGE_DIR:-}
       # Empty by default: routes use their built-in Qdrant/catalog/keyword
       # fallbacks instead of waiting for optional AI containers to time out.
       DATN_RECOMMENDER_URL: ${DATN_RECOMMENDER_URL:-}
@@ -132,6 +142,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
       - "8000:8000"
+    volumes:
+      - ./data/hm/images:/hm_images:ro
     depends_on:
       postgres:
         condition: service_healthy

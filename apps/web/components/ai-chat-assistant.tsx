@@ -13,10 +13,15 @@ import {
   Scale,
   MessageSquareQuote,
   RotateCcw,
+  ThumbsUp,
+  ThumbsDown,
+  Brain,
+  Trash2,
 } from "lucide-react";
-import { ChatMessage, ChatProduct, ChatRequestPayload, Product } from "@/lib/types";
-import { formatVND, sendChat } from "@/lib/api";
+import { ChatMessage, ChatProduct, ChatRequestPayload, PreferencesSummary, PreferenceUsage, Product } from "@/lib/types";
+import { formatVND, getMyPreferences, sendChat } from "@/lib/api";
 import { useCart } from "@/lib/context";
+import { audienceLabel } from "@/lib/labels";
 
 interface AiChatAssistantProps {
   products?: Product[];
@@ -28,13 +33,14 @@ const WELCOME: ChatMessage = {
   id: "welcome-1",
   sender: "assistant",
   content:
-    "Xin chào! Mình là trợ lý mua sắm ShopSense. Bạn có thể mô tả món đồ cần tìm hoặc tải lên một bức ảnh, mình sẽ tìm sản phẩm giống/phù hợp, giải thích lý do dựa trên đánh giá của người mua và so sánh giúp bạn.",
+    "Xin chào! Mình là stylist tư vấn mua sắm của ShopSense. Bạn có thể mô tả món đồ cần tìm, dịp mặc hoặc tải lên hình ảnh trang phục mẫu, mình sẽ tìm các sản phẩm phù hợp nhất, gợi ý phối đồ và so sánh chi tiết giúp bạn.",
   timestamp: "Vừa xong",
   suggestions: [
-    "Giày chạy bộ nam màu đen dưới 500k",
-    "Áo sơ mi trắng công sở",
-    "Túi xách nữ da thật",
-    "Gợi ý cho tôi",
+    "Áo blazer nam công sở",
+    "Váy hoa nữ dạo phố mùa hè",
+    "Quần jeans nữ ống rộng thời thượng",
+    "Set đồ dạo phố năng động",
+    "Gợi ý trang phục cho tôi",
   ],
 };
 
@@ -67,6 +73,72 @@ function renderText(text: string) {
   });
 }
 
+type Verdict = "like" | "dislike";
+
+function usageOf(meta?: Record<string, unknown>): PreferenceUsage | null {
+  const u = meta?.preferences as PreferenceUsage | undefined;
+  return u && typeof u === "object" ? u : null;
+}
+
+/** Customer taste preferences panel */
+function MemoryPanel({
+  memory,
+  usage,
+  session,
+  onForget,
+  onForgetAll,
+}: {
+  memory: PreferencesSummary | null;
+  usage: PreferenceUsage | null;
+  session: Record<number, { product: Product; kind: Verdict }>;
+  onForget: (productId: number) => void;
+  onForgetAll: () => void;
+}) {
+  const sessionLiked = Object.values(session).filter((v) => v.kind === "like").map((v) => v.product);
+  const sessionDisliked = Object.values(session).filter((v) => v.kind === "dislike").map((v) => v.product);
+  const liked = memory ? memory.liked : sessionLiked;
+  const disliked = memory ? memory.disliked : sessionDisliked;
+  const row = (p: Product, kind: Verdict) => (
+    <li key={`${kind}-${p.id}`} className="flex items-center gap-2 text-[11px] text-slate-700">
+      {kind === "like" ? <ThumbsUp className="w-3 h-3 text-emerald-600 flex-shrink-0" /> : <ThumbsDown className="w-3 h-3 text-rose-500 flex-shrink-0" />}
+      <span className="truncate flex-1" title={p.name}>{p.name}</span>
+      {memory && (
+        <button onClick={() => onForget(p.id)} title="Bỏ khỏi sở thích" className="text-slate-400 hover:text-rose-600">
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
+    </li>
+  );
+  return (
+    <div className="px-4 py-3 border-b border-slate-100 bg-emerald-50/40 text-xs space-y-2" data-testid="memory-panel">
+      <p className="text-slate-600 leading-snug">
+        Stylist ghi nhận gu thời trang từ các món đồ bạn bấm Thích (👍) hoặc Không thích (👎). Những món bạn ưng ý sẽ giúp hệ thống chọn lọc các bộ trang phục ngày càng chuẩn phong cách của bạn hơn.
+      </p>
+      {usage && (
+        <p className="text-[11px] text-emerald-800 bg-white border border-emerald-200 rounded-lg px-2 py-1.5">
+          Gợi ý mới nhất đã được điều chỉnh phù hợp với sở thích và phản hồi gần đây của bạn.
+        </p>
+      )}
+      {liked.length + disliked.length === 0 ? (
+        <p className="text-[11px] text-slate-500">Chưa có món đồ nào được ghi nhận. Hãy bấm 👍/👎 trên một sản phẩm để lưu gu của bạn.</p>
+      ) : (
+        <ul className="space-y-1">
+          {liked.map((p) => row(p, "like"))}
+          {disliked.map((p) => row(p, "dislike"))}
+        </ul>
+      )}
+      <div className="flex items-center justify-between text-[10px] text-slate-500">
+        <span>{memory ? `Đã lưu vào hồ sơ tài khoản (${memory.event_count} tương tác).` : "Chưa đăng nhập: ghi nhớ tạm thời trong phiên trò chuyện này."}</span>
+        {memory && memory.event_count > 0 && (
+          <button onClick={onForgetAll} className="font-semibold text-rose-600 hover:underline">
+            Đặt lại sở thích
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function EvidenceList({ item }: { item: ChatProduct }) {
   const [open, setOpen] = useState(false);
   if (!item.evidence.length) return null;
@@ -80,7 +152,7 @@ function EvidenceList({ item }: { item: ChatProduct }) {
         className="text-[10px] font-semibold text-emerald-700 hover:underline flex items-center gap-1"
       >
         <MessageSquareQuote className="w-3 h-3" />
-        {open ? "Ẩn" : "Xem"} nhận xét người mua ({item.evidence.length})
+        {open ? "Ẩn" : "Xem"} nhận xét từ khách hàng ({item.evidence.length})
       </button>
       {open && (
         <ul className="mt-1 space-y-1">
@@ -107,12 +179,23 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
   const [pendingImage, setPendingImage] = useState<{ dataUrl: string; preview: string } | null>(null);
   const [compareSel, setCompareSel] = useState<Record<string, number[]>>({});
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memory, setMemory] = useState<PreferencesSummary | null>(null);
+  const [sessionVerdicts, setSessionVerdicts] = useState<Record<number, { product: Product; kind: Verdict }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  const refreshMemory = async () => setMemory(await getMyPreferences());
+
+  useEffect(() => {
+    if (memoryOpen) void refreshMemory();
+  }, [memoryOpen]);
+
+  const latestUsage = usageOf([...messages].reverse().find((m) => m.sender === "assistant" && usageOf(m.meta))?.meta);
 
   const send = async (payload: ChatRequestPayload, userLabel: string, preview?: string) => {
     setMessages((prev) => [
@@ -150,7 +233,33 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
       ]);
     } finally {
       setIsTyping(false);
+      if (memoryOpen) void refreshMemory();
     }
+  };
+
+  /** 👍/👎 on a result card: goes through the chat so the assistant records it and (for 👎) refreshes the list. */
+  const giveFeedback = (item: ChatProduct, idx: number, kind: Verdict) => {
+    if (isTyping) return;
+    setSessionVerdicts((prev) => ({ ...prev, [item.product.id]: { product: item.product, kind } }));
+    void send(
+      { message: "", action: { type: "feedback", kind, product_id: item.product.id } },
+      kind === "like" ? `👍 Thích sản phẩm ${idx + 1}` : `👎 Không thích sản phẩm ${idx + 1}`,
+    );
+  };
+
+  /** Through the chat too: the gateway deletes the stored rows and the RAG session drops its own copy. */
+  const forget = (productId?: number) => {
+    if (isTyping) return;
+    setSessionVerdicts((prev) => {
+      if (productId === undefined) return {};
+      const rest = { ...prev };
+      delete rest[productId];
+      return rest;
+    });
+    void send(
+      { message: "", action: { type: "forget", product_id: productId } },
+      productId === undefined ? "Xóa toàn bộ sở thích đã nhớ" : "Quên phản hồi về một sản phẩm",
+    );
   };
 
   const handleSend = async (customPrompt?: string) => {
@@ -186,18 +295,20 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
     setMessages([WELCOME]);
     setCompareSel({});
     setPendingImage(null);
+    setSessionVerdicts({}); // logged-in taste memory persists in the account; this only clears the on-screen marks
+    if (memoryOpen) void refreshMemory();
   };
 
   if (isFloating && !isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-2xl hover:scale-105 transition-all flex items-center gap-2.5 font-bold text-sm border border-slate-700/60 glow-emerald"
+        className="fixed bottom-6 right-6 z-40 p-4 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white shadow-2xl hover:scale-105 transition-all flex items-center gap-2.5 font-bold text-sm border border-slate-700/60"
       >
         <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
-          <Bot className="w-4 h-4" />
+          <Sparkles className="w-4 h-4" />
         </div>
-        <span className="hidden sm:inline">Trợ Lý AI ShopSense</span>
+        <span className="hidden sm:inline">Tư Vấn Phong Cách</span>
       </button>
     );
   }
@@ -213,21 +324,35 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
       {/* HEADER */}
       <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xs">
-            <Bot className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-xs">
+            <Sparkles className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <h4 className="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-1.5">
-              <span>Trợ Lý Mua Sắm AI</span>
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Stylist Tư Vấn Mua Sắm</span>
             </h4>
             <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Tìm kiếm đa phương thức · RAG từ đánh giá thật
+              Sẵn sàng hỗ trợ phối đồ &amp; gợi ý trang phục
             </span>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setMemoryOpen((v) => !v)}
+            title="Gu thời trang đã ghi nhớ"
+            aria-pressed={memoryOpen}
+            className={`relative p-2 rounded-xl transition-colors ${
+              memoryOpen ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 hover:text-slate-900 hover:bg-slate-200"
+            }`}
+          >
+            <Brain className="w-4 h-4" />
+            {Object.keys(sessionVerdicts).length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-600 text-white text-[9px] font-bold flex items-center justify-center">
+                {Object.keys(sessionVerdicts).length}
+              </span>
+            )}
+          </button>
           <button
             onClick={resetChat}
             title="Cuộc trò chuyện mới"
@@ -246,18 +371,14 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
         </div>
       </div>
 
+      {memoryOpen && (
+        <MemoryPanel memory={memory} usage={latestUsage} session={sessionVerdicts} onForget={(id) => forget(id)} onForgetAll={() => forget()} />
+      )}
+
       {/* CHAT MESSAGES */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
         {messages.map((msg) => {
           const selected = compareSel[msg.id] ?? [];
-          const sourceLabel =
-            msg.meta?.answer_source === "llm"
-              ? "Sinh bởi LLM, đã kiểm chứng nguồn"
-              : msg.meta?.answer_source === "template"
-                ? "Trả lời dựng trực tiếp từ dữ liệu"
-                : msg.meta?.answer_source === "keyword_fallback"
-                  ? "Chế độ dự phòng (tìm theo từ khóa)"
-                  : null;
           return (
             <div key={msg.id} className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
               {msg.imagePreview && (
@@ -291,11 +412,18 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
                 <div className="mt-3 w-full grid grid-cols-1 gap-2.5">
                   {msg.chatProducts.map((item, idx) => {
                     const p = item.product;
+                    const verdict = sessionVerdicts[p.id]?.kind;
                     return (
                       <div
                         key={p.id}
                         onClick={() => onSelectProduct?.(p)}
-                        className="p-2.5 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 hover:border-emerald-500/50 cursor-pointer transition-all group shadow-2xs hover:shadow-xs"
+                        className={`p-2.5 rounded-xl bg-slate-50 hover:bg-white border cursor-pointer transition-all group shadow-2xs hover:shadow-xs ${
+                          verdict === "like"
+                            ? "border-emerald-400"
+                            : verdict === "dislike"
+                              ? "border-rose-200 opacity-60"
+                              : "border-slate-200 hover:border-emerald-500/50"
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-2.5 min-w-0">
@@ -316,7 +444,14 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
                                     giá tham khảo
                                   </span>
                                 )}
-                                {item.brand && <span className="text-[10px] text-slate-500">{item.brand}</span>}
+                                {(item.brand || item.product_type || item.colour) && (
+                                  <span className="text-[10px] text-slate-500">
+                                    {item.brand || [item.product_type, item.colour].filter(Boolean).join(" · ")}
+                                  </span>
+                                )}
+                                {item.audience && item.audience !== "other" && (
+                                  <span className="text-[10px] text-slate-500">· {audienceLabel(item.audience)}</span>
+                                )}
                                 {item.avg_rating != null && item.review_count > 0 && (
                                   <span className="text-[10px] text-amber-600 flex items-center gap-0.5 font-semibold">
                                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -368,6 +503,36 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
                           >
                             Tương tự
                           </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              giveFeedback(item, idx, "like");
+                            }}
+                            disabled={isTyping}
+                            title="Thích — stylist sẽ ưu tiên phong cách này"
+                            aria-label={`Thích sản phẩm ${idx + 1}`}
+                            aria-pressed={verdict === "like"}
+                            className={`p-1 rounded-md border transition-colors disabled:opacity-40 ${
+                              verdict === "like" ? "bg-emerald-600 border-emerald-600 text-white" : "bg-white border-slate-200 text-slate-500 hover:border-emerald-500 hover:text-emerald-700"
+                            }`}
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              giveFeedback(item, idx, "dislike");
+                            }}
+                            disabled={isTyping}
+                            title="Không thích — stylist sẽ không gợi ý lại"
+                            aria-label={`Không thích sản phẩm ${idx + 1}`}
+                            aria-pressed={verdict === "dislike"}
+                            className={`p-1 rounded-md border transition-colors disabled:opacity-40 ${
+                              verdict === "dislike" ? "bg-rose-600 border-rose-600 text-white" : "bg-white border-slate-200 text-slate-500 hover:border-rose-400 hover:text-rose-600"
+                            }`}
+                          >
+                            <ThumbsDown className="w-3 h-3" />
+                          </button>
                           {msg.chatProducts!.length > 1 && (
                             <label
                               onClick={(e) => e.stopPropagation()}
@@ -400,8 +565,7 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
 
               <span className="text-[10px] text-slate-400 mt-1 px-1 flex items-center gap-1.5">
                 {msg.timestamp}
-                {sourceLabel && <span className="text-slate-400">· {sourceLabel}</span>}
-                {msg.meta?.personalized === true && <span className="text-emerald-600 font-semibold">· cá nhân hóa</span>}
+                {msg.meta?.personalized === true && <span className="text-emerald-600 font-semibold">· gợi ý theo gu</span>}
               </span>
             </div>
           );
@@ -409,8 +573,8 @@ export function AiChatAssistant({ onSelectProduct, isFloating = false }: AiChatA
 
         {isTyping && (
           <div className="flex items-center gap-2 text-xs text-slate-500 p-2">
-            <Bot className="w-4 h-4 text-emerald-600 animate-spin" />
-            <span>ShopSense AI đang tìm kiếm & đọc đánh giá...</span>
+            <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
+            <span>Stylist đang chọn lọc trang phục phù hợp cho bạn...</span>
           </div>
         )}
         <div ref={messagesEndRef} />

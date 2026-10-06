@@ -46,7 +46,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess }: CheckoutModalProps
       const order = await checkoutOrder(address.trim());
       setCreatedOrder(order);
       await refreshCart();
-      showToast("Đặt hàng thành công! Đơn hàng đã được lưu vào cơ sở dữ liệu.", "success");
+      showToast("Đặt hàng thành công! Đơn hàng của bạn đang được xử lý.", "success");
     } catch (err: any) {
       showToast(err.message || "Thanh toán thất bại", "error");
     } finally {
@@ -82,7 +82,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess }: CheckoutModalProps
             <div>
               <h3 className="text-2xl font-extrabold text-slate-900">Đặt Hàng Thành Công!</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Giao dịch ACID đã trừ tồn kho sản phẩm trong PostgreSQL
+                Cảm ơn bạn đã mua sắm tại ShopSense. Đơn hàng đang được chuẩn bị để giao tới bạn.
               </p>
             </div>
 
@@ -163,17 +163,17 @@ export function CheckoutModal({ isOpen, onClose, onSuccess }: CheckoutModalProps
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setAddress("Tòa nhà FPT Tower, Số 10 Phạm Văn Bạch, Cầu Giấy, Hà Nội")}
+                  onClick={() => setAddress("Số 25 Phố Huế, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội")}
                   className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-600 font-medium border border-slate-200 transition-colors"
                 >
-                  Gợi ý: Cầu Giấy, Hà Nội
+                  Gợi ý: Hoàn Kiếm, Hà Nội
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAddress("Ký túc xá Đại học Quốc Gia, Khu phố 6, TP. Thủ Đức, TP. Hồ Chí Minh")}
+                  onClick={() => setAddress("Số 182 Lê Duẩn, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh")}
                   className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-600 font-medium border border-slate-200 transition-colors"
                 >
-                  Gợi ý: TP. Thủ Đức, TP.HCM
+                  Gợi ý: Quận 1, TP.HCM
                 </button>
               </div>
             </div>
@@ -185,7 +185,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess }: CheckoutModalProps
               className="w-full py-3.5 rounded-xl font-bold text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
               {loading ? (
-                <span>Đang xử lý khóa tồn kho & tạo đơn...</span>
+                <span>Đang xử lý đơn hàng...</span>
               ) : (
                 <>
                   <span>Hoàn Tất Đặt Hàng ({formatVND(Number(total))})</span>

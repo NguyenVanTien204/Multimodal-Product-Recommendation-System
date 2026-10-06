@@ -71,6 +71,9 @@ class FakeAgent:
             lang="vi",
             products=[ProductResult(7, "B0X", 0.5, payload, ["reason"], [{"review_id": 1, "rating": 5.0, "helpful_vote": 2, "text": "great"}])],
             meta={"answer_source": "template"},
+            events=[{"event_id": "e1", "sku": "B0X", "kind": req.action["kind"], "ts": 1.0, "source": "chat"}]
+            if (req.action or {}).get("type") == "feedback"
+            else [],
         )
 
 
@@ -103,6 +106,29 @@ def test_chat_maps_product_payload_and_forwards_history(client):
     assert body["products"][0]["price"] == 1_250_000.0 and body["products"][0]["evidence"][0]["text"] == "great"
     req = agent.requests[-1]
     assert req.history_skus == ["B1", "B2"] and req.k == 3 and req.image is None
+
+
+def test_chat_passes_preference_events_in_and_returns_new_ones(client):
+    c, agent = client
+    r = c.post(
+        "/chat",
+        json={
+            "message": "x",
+            "events": [{"sku": "B1", "kind": "dislike", "ts": 5.0, "event_id": "old"}, {"sku": "B2", "kind": "like"}],
+            "action": {"type": "feedback", "kind": "like", "product_id": 7},
+        },
+    )
+    assert r.status_code == 200
+    events = agent.requests[-1].events
+    assert [(e.sku, e.kind, e.ts, e.event_id) for e in events[:1]] == [("B1", "dislike", 5.0, "old")]
+    assert events[1].sku == "B2" and events[1].event_id and events[1].ts > 0  # defaults filled in
+    assert r.json()["events"] == [{"event_id": "e1", "sku": "B0X", "kind": "like", "ts": 1.0, "source": "chat"}]
+
+
+def test_chat_rejects_unknown_event_kinds_and_feedback_kinds(client):
+    c, _ = client
+    assert c.post("/chat", json={"message": "x", "events": [{"sku": "B1", "kind": "love"}]}).status_code == 422
+    assert c.post("/chat", json={"message": "x", "action": {"type": "feedback", "kind": "meh"}}).status_code == 422
 
 
 def test_chat_decodes_data_url_image(client):

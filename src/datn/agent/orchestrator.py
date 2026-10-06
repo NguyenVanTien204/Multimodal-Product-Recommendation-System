@@ -7,13 +7,13 @@ import re
 import statistics
 import time
 from contextvars import ContextVar
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass, field, replace
+from typing import Any, Iterable, Sequence
 
 import numpy as np
 
 from ..rag.answer import Answer, AnswerGenerator, template_compare, template_explain, template_search
-from ..rag.context import EvidenceContext
+from ..rag.context import AUDIENCE_VI, EvidenceContext
 from ..rag.evidence import Review, ReviewRetriever
 from ..rag.llm import LLM, LLMUnavailable, parse_json_object
 from ..retrieval import schema as S
@@ -21,6 +21,15 @@ from ..retrieval.encoder import JinaClipEncoder
 from ..retrieval.filters import Hit, SearchFilters
 from ..retrieval.search import RRF_K, HybridSearcher
 from .intent import Intent, detect_lang, parse_intent
+from .preferences import (
+    NEGATIVE_NEIGHBOURS,
+    NEIGHBOUR_POOL,
+    NEGATIVE_WEIGHT,
+    PreferenceEvent,
+    PreferenceProfile,
+    merge_history,
+    neighbour_penalty,
+)
 from .recommender_client import PersonalRanking, RecommenderClient
 from .session import Preferences, Session, SessionStore, ShownProduct
 
@@ -39,6 +48,7 @@ def _mark(name: str, t0: float) -> None:
 POOL = 60  # candidates kept per vector search (and reused by refinements)
 PERSONAL_WEIGHT = 0.6  # weight of the model's rank vs. the semantic rank in the fused score
 MAX_HISTORY = 30
+MAX_EXCLUDED_NEGATIVES = 200
 
 HELP_VI = (
     "Mình là trợ lý mua sắm thời trang. Mình có thể:\n"
@@ -46,12 +56,13 @@ HELP_VI = (
     "• Lọc/tinh chỉnh ngay trong hội thoại: “rẻ hơn”, “màu đỏ”, “thương hiệu Nike”, “cái khác”\n"
     "• Gợi ý cá nhân hoá theo lịch sử mua/xem của bạn (“gợi ý cho tôi”)\n"
     "• Giải thích vì sao gợi ý một sản phẩm và dẫn chứng từ đánh giá người mua (“tại sao sản phẩm 2?”)\n"
-    "• So sánh sản phẩm (“so sánh 1 và 3”), tìm sản phẩm tương tự (“giống cái đầu tiên”)"
+    "• So sánh sản phẩm (“so sánh 1 và 3”), tìm sản phẩm tương tự (“giống cái đầu tiên”)\n"
+    "• Ghi nhớ gu của bạn: “thích cái 2”, “không thích sản phẩm 3” — mình sẽ ưu tiên đồ gần gu và không gợi ý lại đồ bạn đã loại"
 )
 HELP_EN = (
     "I'm a fashion shopping assistant. I can search by text or an uploaded photo, refine results (“cheaper”, “red”, “Nike”), "
     "recommend based on your history, explain a pick using buyer reviews (“why #2?”), compare products (“compare 1 and 3”) "
-    "and find similar items (“like the first one”)."
+    "and find similar items (“like the first one”). Tell me what you like or dislike (“I like #2”, “not a fan of #3”) and I'll remember your taste."
 )
 
 
@@ -61,7 +72,8 @@ class ChatRequest:
     session_id: str | None = None
     image: Any | None = None  # PIL.Image
     history_skus: list[str] = field(default_factory=list)  # from the shop: cart/orders, oldest first
-    action: dict[str, Any] | None = None  # UI button, e.g. {"type": "explain", "product_id": 12}
+    events: list[PreferenceEvent] = field(default_factory=list)  # durable feedback from the shop DB (likes, dislikes, clicks)
+    action: dict[str, Any] | None = None  # UI button, e.g. {"type": "explain", "product_id": 12} or {"type": "feedback", "kind": "dislike", "product_id": 12}
     filters: SearchFilters | None = None  # explicit UI filters (merged with parsed ones)
     force: str | None = None  # API endpoints pin the action (search|refine|recommend|...) instead of inferring it
     k: int = 5
@@ -91,12 +103,32 @@ class ChatResponse:
     citations: list[str] = field(default_factory=list)
     meta: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)  # feedback recorded this turn, for the shop DB to persist
 
 
 def _digest(image: Any | None) -> str | None:
     if image is None:
         return None
     return hashlib.md5(image.convert("RGB").resize((32, 32)).tobytes()).hexdigest()
+
+
+_COLOUR_ALIASES = {"gray": "grey", "navy blue": "dark blue", "navy": "dark blue"}
+
+
+def colour_groups(base_colours: Iterable[str], known: Sequence[str]) -> tuple[str, ...]:
+    """Map the base colours the user named ("red", "gray") onto the catalog's colour groups ("Red", "Dark Red",
+    "Light Red", ...). Empty when the catalog has no colour facet (Amazon) so nothing is filtered."""
+    if not known:
+        return ()
+    out: list[str] = []
+    for base in base_colours:
+        want = _COLOUR_ALIASES.get(base.lower(), base.lower())
+        if want == "dark blue":  # "navy" means a dark blue only
+            hits = [k for k in known if k.lower() == "dark blue"]
+        else:
+            hits = [k for k in known if want in k.lower().split() and k.lower() != "off white" or k.lower() == want]
+        out.extend(h for h in hits if h not in out)
+    return tuple(out)
 
 
 def _is_stricter(new: SearchFilters, old: SearchFilters) -> bool:
@@ -111,6 +143,10 @@ def _is_stricter(new: SearchFilters, old: SearchFilters) -> bool:
     if old.category_slugs and not (new.category_slugs and set(new.category_slugs) <= set(old.category_slugs)):
         return False
     if old.min_rating is not None and (new.min_rating is None or new.min_rating < old.min_rating):
+        return False
+    if old.audiences and not (new.audiences and set(new.audiences) <= set(old.audiences)):
+        return False
+    if old.colours and not (new.colours and {c.lower() for c in new.colours} <= {c.lower() for c in old.colours}):
         return False
     return True
 
@@ -143,6 +179,7 @@ class ChatAgent:
         self.generator = AnswerGenerator(llm)
         self.store = store or SessionStore()
         self.known_brands: dict[str, str] = {}
+        self.known_colours: list[str] = []  # H&M colour_group_name values, e.g. "Dark Blue"
         self.encoder_ok = encoder is not None
 
     # ---- startup -----------------------------------------------------------------
@@ -152,6 +189,7 @@ class ChatAgent:
         from .intent import fold
 
         self.known_brands = {fold(b): b for b in brands if len(b) >= 3}
+        self.known_colours = sorted(self.searcher.facet_counts(S.P_COLOUR, limit=200))
         if self.encoder is not None and not self.encoder.loaded:
             try:
                 self.encoder.load()
@@ -165,6 +203,7 @@ class ChatAgent:
         t0 = time.perf_counter()
         token = _TIMINGS.set({})
         session = self.store.get_or_create(req.session_id)
+        session.pending_events = []
         lang = detect_lang(req.message, default=session.turns and detect_lang(session.turns[0]["content"]) or "vi") if req.message else "vi"
 
         t_intent = time.perf_counter()
@@ -181,6 +220,8 @@ class ChatAgent:
             "similar": self._do_similar,
             "explain": self._do_explain,
             "compare": self._do_compare,
+            "feedback": self._do_feedback,
+            "forget": self._do_forget,
         }.get(intent.action)
 
         if intent.action == "reset":
@@ -210,6 +251,7 @@ class ChatAgent:
                 resp.warnings.append("internal_error")
 
         session.add_turn("assistant", resp.reply)
+        resp.events = [e.to_dict() for e in session.pending_events]
         resp.meta["latency_ms"] = round((time.perf_counter() - t0) * 1000)
         resp.meta["timings_ms"] = {k: round(v) for k, v in (_TIMINGS.get() or {}).items()}
         _TIMINGS.reset(token)
@@ -220,9 +262,11 @@ class ChatAgent:
     # ---- intent resolution ---------------------------------------------------------
     def _intent_from_request(self, req: ChatRequest, session: Session, lang: str) -> Intent:
         act = req.action or {}
-        if act.get("type") in {"explain", "compare", "similar", "recommend"}:
+        if act.get("type") in {"explain", "compare", "similar", "recommend", "feedback", "forget"}:
             ids = [int(i) for i in act.get("product_ids") or ([act["product_id"]] if act.get("product_id") else [])]
             intent = Intent(action=act["type"], lang=lang, query=req.message, display_query=req.message)
+            if act["type"] == "feedback":
+                intent.feedback = "dislike" if act.get("kind") == "dislike" else "like"
             intent.ordinals = tuple(
                 i + 1 for pid in ids for i, p in enumerate(session.last_results) if p.product_id == pid
             )
@@ -312,19 +356,71 @@ class ChatAgent:
             updates["brands"] = tuple(intent.brands)
         if intent.min_rating is not None:
             updates["min_rating"] = intent.min_rating
+        if intent.audiences:
+            updates["audiences"] = tuple(intent.audiences)
+        colours = colour_groups(intent.colors, self.known_colours)
+        if colours:
+            updates["colours"] = colours
         f = f.with_(**updates)
         if req.filters:
             explicit = {k: v for k, v in req.filters.to_dict().items() if v not in (None, [], ())}
             f = SearchFilters.from_dict({**f.to_dict(), **explicit})
         return f
 
-    def _history(self, session: Session, req: ChatRequest) -> list[str]:
-        merged: list[str] = []
-        for sku in [*req.history_skus, *session.focus_history_skus]:
-            if sku in merged:
-                merged.remove(sku)
-            merged.append(sku)
-        return merged[-MAX_HISTORY:]
+    # ---- interaction memory ---------------------------------------------------------
+    def _profile(self, session: Session, req: ChatRequest) -> PreferenceProfile:
+        """Durable events from the shop DB plus what happened in this session (deduplicated by event id)."""
+        return PreferenceProfile.from_events([*req.events, *session.events])
+
+    def _history(self, session: Session, req: ChatRequest, profile: PreferenceProfile | None = None) -> list[str]:
+        """The User Tower's input: shop cart/orders, then liked/engaged items; disliked items never appear."""
+        profile = profile or self._profile(session, req)
+        return merge_history(req.history_skus, profile.positives(MAX_HISTORY), profile.negatives(), MAX_HISTORY)
+
+    async def _negatives(self, session: Session, profile: PreferenceProfile) -> tuple[list[int], list[dict[int, int]]]:
+        """(product ids of every disliked item still in the catalogue, nearest-neighbour rank maps of the most recent few)."""
+        skus = profile.negatives(MAX_EXCLUDED_NEGATIVES)
+        if not skus:
+            return [], []
+        t = time.perf_counter()
+        missing = [s for s in skus if s not in session.sku_product_ids]
+        if missing:
+            found = await asyncio.to_thread(self.searcher.products_by_sku, missing)
+            for sku in missing:
+                session.sku_product_ids[sku] = found[sku].product_id if sku in found else 0  # 0 = not in this catalogue
+        pids = [pid for pid in (session.sku_product_ids.get(s, 0) for s in skus) if pid]
+        maps: list[dict[int, int]] = []
+        for pid in pids[:NEGATIVE_NEIGHBOURS]:
+            if pid not in session.neighbour_cache:
+                near = await asyncio.to_thread(self.searcher.similar, [pid], None, NEIGHBOUR_POOL)
+                session.neighbour_cache[pid] = {h.product_id: rank for rank, h in enumerate(near, start=1)}
+            maps.append(session.neighbour_cache[pid])
+        _mark("preferences_ms", t)
+        return pids, maps
+
+    @staticmethod
+    def _penalise(hits: list[Hit], neighbour_maps: list[dict[int, int]], protect: Iterable[str] = ()) -> int:
+        """Subtract the neighbourhood penalty (same RRF scale as the personal boost) and re-sort. Returns #penalised.
+        `protect` = SKUs the user liked/bought: sitting next to a disliked item must not demote what they asked for."""
+        n = 0
+        keep = set(protect)
+        for h in hits:
+            if h.sku in keep:
+                continue
+            p = neighbour_penalty(neighbour_maps, h.product_id, NEGATIVE_WEIGHT, RRF_K)
+            if p:
+                h.score -= p
+                h.ranks["avoid"] = min(m[h.product_id] for m in neighbour_maps if h.product_id in m)
+                n += 1
+        if n:
+            hits.sort(key=lambda h: h.score, reverse=True)
+        return n
+
+    @staticmethod
+    def _preference_meta(profile: PreferenceProfile, history: list[str], excluded: int, penalised: int) -> dict[str, Any] | None:
+        if not profile.scores:
+            return None
+        return {**profile.summary(), "history_used": len(history), "excluded": excluded, "penalised": penalised}
 
     def _relative_price(self, session: Session, intent: Intent) -> float | None:
         pool = session.resolve(list(intent.ordinals)) or session.last_results
@@ -357,6 +453,7 @@ class ChatAgent:
                 "title": r.title,
                 "text": r.snippet(360),
                 "relevance": round(r.score, 3),
+                "is_mock": r.is_mock,
             }
             for i, r in enumerate(revs)
         ]
@@ -431,8 +528,10 @@ class ChatAgent:
             prefs.query, prefs.display_query, prefs.colors = intent.query, intent.display_query, intent.colors
         if intent.clear_filters:
             filters = SearchFilters()
+        profile = self._profile(session, req)
+        neg_ids, neg_maps = await self._negatives(session, profile)
         exclude = tuple(session.seen_product_ids) if intent.exclude_shown else filters.exclude_product_ids
-        filters = filters.with_(exclude_product_ids=tuple(exclude))
+        filters = filters.with_(exclude_product_ids=tuple(dict.fromkeys([*exclude, *neg_ids])))
         prefs.filters = filters
 
         text = prefs.query.strip() or None
@@ -476,7 +575,7 @@ class ChatAgent:
             _mark("retrieval_ms", t_ret)
 
         # Personalization: fuse the semantic rank with the checkpointed model's rank.
-        history = self._history(session, req)
+        history = self._history(session, req, profile)
         ranking: PersonalRanking | None = None
         if history:
             ranking = await self._personal(history)
@@ -493,6 +592,11 @@ class ChatAgent:
             meta["personalization"] = {"model": ranking.model_version, "hits_boosted": sum("personal" in h.ranks for h in pool_hits)}
         elif history:
             meta["personalization"] = "unavailable"
+
+        penalised = self._penalise(pool_hits, neg_maps, profile.positives())
+        pref_meta = self._preference_meta(profile, history, len(neg_ids), penalised)
+        if pref_meta:
+            meta["preferences"] = pref_meta
 
         top = pool_hits[: req.k]
         return await self._answer_hits(session, intent, req, top, text_vec, prefs, personalized, meta, task="search")
@@ -523,7 +627,7 @@ class ChatAgent:
         )
         results = []
         for i, h in enumerate(top):
-            r = self._to_result(h, self._reasons(h, prefs, intent, req))
+            r = self._to_result(h, self._reasons(h, prefs, intent, req, liked=(meta.get("preferences") or {}).get("liked_or_engaged", 0)))
             revs = per.get(h.product_id, [])
             r.evidence = self._evidence_dicts(revs, [t for t, _ in ctx.reviews.get(f"P{i + 1}", [])])
             results.append(r)
@@ -539,7 +643,7 @@ class ChatAgent:
         meta["personalized"] = personalized
         return self._finish(session, intent, top, results, answer, ctx, meta)
 
-    def _reasons(self, h: Hit, prefs: Preferences, intent: Intent, req: ChatRequest) -> list[str]:
+    def _reasons(self, h: Hit, prefs: Preferences, intent: Intent, req: ChatRequest, liked: int = 0) -> list[str]:
         reasons: list[str] = []
         s = h.scores
         text_sim = s.get("text_query->text")
@@ -554,11 +658,19 @@ class ChatAgent:
             reasons.append(f"Nằm trong ngân sách ≤ {int(f.max_price):,}₫".replace(",", "."))
         if f.brands and h.payload.get(S.P_BRAND):
             reasons.append(f"Thương hiệu {h.payload[S.P_BRAND]} như bạn yêu cầu")
+        if f.colours and h.payload.get(S.P_COLOUR):
+            reasons.append(f"Đúng màu bạn chọn ({h.payload[S.P_COLOUR]})")
+        if f.audiences and h.payload.get(S.P_AUDIENCE):
+            reasons.append(f"Dành cho {AUDIENCE_VI.get(h.payload[S.P_AUDIENCE], h.payload[S.P_AUDIENCE])} như bạn yêu cầu")
         if "personal" in h.ranks:
-            reasons.append(f"Nằm trong top {h.ranks['personal']} gợi ý cá nhân hoá từ lịch sử của bạn (User Tower + Reranker)")
+            basis = f"lịch sử và {liked} sản phẩm bạn đã thích/quan tâm" if liked else "lịch sử của bạn"
+            reasons.append(f"Nằm trong top {h.ranks['personal']} gợi ý cá nhân hoá từ {basis} (User Tower + Reranker)")
         avg, n = h.payload.get(S.P_AVG_RATING), h.payload.get(S.P_REVIEW_COUNT, 0)
         if avg is not None and n:
-            reasons.append(f"Được đánh giá {avg:.1f}/5 từ {n} người mua")
+            if h.payload.get(S.P_REVIEWS_MOCK):
+                reasons.append(f"Điểm đánh giá minh hoạ {avg:.1f}/5 từ {n} đánh giá (dữ liệu mô phỏng, H&M không công bố đánh giá)")
+            else:
+                reasons.append(f"Được đánh giá {avg:.1f}/5 từ {n} người mua")
         for key in ("similar->image", "similar->text"):
             if key in s:
                 reasons.append("Có nội dung/hình ảnh gần với sản phẩm bạn quan tâm")
@@ -569,11 +681,15 @@ class ChatAgent:
     async def _do_recommend(self, session: Session, intent: Intent, req: ChatRequest) -> ChatResponse:
         prefs = session.prefs
         filters = self._filters_from(intent, req)
+        profile = self._profile(session, req)
+        neg_ids, neg_maps = await self._negatives(session, profile)
+        filters = filters.with_(exclude_product_ids=tuple(dict.fromkeys([*filters.exclude_product_ids, *neg_ids])))
         prefs.filters, prefs.query, prefs.display_query = filters, "", "gợi ý dành cho bạn"
-        history = self._history(session, req)
+        history = self._history(session, req, profile)
         meta: dict[str, Any] = {"retrieval": "personal"}
         hits: list[Hit] = []
         ranking = await self._personal(history)
+        penalised = 0
         if ranking and ranking.skus:
             by_sku = await asyncio.to_thread(self.searcher.products_by_sku, ranking.skus)
             seen = set(history)
@@ -585,6 +701,7 @@ class ChatAgent:
                 hit.scores["model"] = score
                 hit.ranks["personal"] = rank
                 hits.append(hit)
+            penalised = self._penalise(hits, neg_maps, profile.positives())
             meta["personalization"] = {"model": ranking.model_version, "source": ranking.source}
             if ranking.source == "popularity_fallback":
                 meta["cold_start"] = True
@@ -595,6 +712,9 @@ class ChatAgent:
         if not hits:
             hits = await asyncio.to_thread(self.searcher.popular, filters, POOL)
             meta["retrieval"] = "popularity"
+        pref_meta = self._preference_meta(profile, history, len(neg_ids), penalised)
+        if pref_meta:
+            meta["preferences"] = pref_meta
         top = hits[: req.k]
         personalized = any("personal" in h.ranks for h in top)
         return await self._answer_hits(session, intent, req, top, None, prefs, personalized, meta, task="search")
@@ -618,13 +738,84 @@ class ChatAgent:
             return self._plain(session, "similar", intent.lang, "Bạn muốn tìm sản phẩm giống cái nào? Hãy chọn một sản phẩm (ví dụ “giống cái đầu tiên”).")
         prefs = session.prefs
         filters = self._filters_from(intent, req)
+        neg_ids, _ = await self._negatives(session, self._profile(session, req))
+        filters = filters.with_(exclude_product_ids=tuple(dict.fromkeys([*filters.exclude_product_ids, *neg_ids])))
         prefs.filters = filters
-        for t in targets:
-            session.engage(str(t.payload.get(S.P_ITEM_ID, "")))
+        for t in targets:  # "I like #2, find similar" is explicit feedback, a plain "similar to #2" only implicit interest
+            session.record(str(t.payload.get(S.P_ITEM_ID, "")), "like" if intent.feedback == "like" else "click")
         ids = [t.product_id for t in targets]
         hits = await asyncio.to_thread(self.searcher.similar, ids, filters, POOL)
         prefs.query, prefs.display_query = "", f"giống “{targets[0].payload.get(S.P_TITLE, '')[:50]}”"
         return await self._answer_hits(session, intent, req, hits[: req.k], None, prefs, False, {"retrieval": "item_to_item"}, task="search")
+
+    # ---- feedback --------------------------------------------------------------------
+    async def _do_feedback(self, session: Session, intent: Intent, req: ChatRequest) -> ChatResponse:
+        """Record like/dislike on shown items. A dislike immediately refreshes the list without them."""
+        kind = intent.feedback or "like"
+        vi = intent.lang == "vi"
+        if intent.explicit_product_ids:
+            targets = self._targets(session, intent)
+        else:  # never guess: "không thích 9" with 5 results must not be applied to #1
+            targets = session.resolve(list(intent.ordinals))
+            if intent.refers_last and session.last_results:
+                targets.append(session.last_results[-1])
+        targets = await self._payloads(targets)
+        if not targets:
+            return self._plain(
+                session, "feedback", intent.lang,
+                "Bạn muốn nói về sản phẩm nào? Hãy chỉ rõ số thứ tự trong danh sách (ví dụ “không thích sản phẩm 2”)." if vi
+                else "Which product do you mean? Please give its number (e.g. “not a fan of #2”).",
+            )
+        for t in targets:
+            session.record(str(t.payload.get(S.P_ITEM_ID, "")), kind)
+        names = ", ".join(f"“{str(t.payload.get(S.P_TITLE, ''))[:40]}”" for t in targets[:3])
+        if kind == "like":
+            ack = (f"Đã ghi nhận bạn thích {names}. Mình sẽ ưu tiên các sản phẩm gần gu này khi gợi ý." if vi
+                   else f"Noted, you like {names}. I'll favour items close to this taste.")
+        else:
+            ack = (f"Đã ghi nhận bạn không thích {names}. Mình sẽ không gợi ý lại và hạ ưu tiên các sản phẩm giống nó." if vi
+                   else f"Noted, you dislike {names}. I won't show it again and will rank similar items lower.")
+        meta = {"feedback": {"kind": kind, "product_ids": [t.product_id for t in targets]}}
+
+        quiet = replace(req, message="", action=None)  # the refresh answers the standing search, not the feedback sentence
+        resp: ChatResponse | None = None
+        if kind == "dislike":
+            if session.prefs.query.strip():
+                resp = await self._do_search(session, Intent(action="refine", lang=intent.lang), quiet)
+            elif session.last_results:
+                resp = await self._do_recommend(session, Intent(action="recommend", lang=intent.lang), quiet)
+        if resp is None:
+            resp = self._plain(session, "feedback", intent.lang, ack)
+        else:
+            resp.reply = f"{ack}\n\n{resp.reply}"
+        resp.action = "feedback"
+        resp.meta.update(meta)
+        return resp
+
+    async def _do_forget(self, session: Session, intent: Intent, req: ChatRequest) -> ChatResponse:
+        """UI "forget" button: drop remembered feedback from this session (the shop DB rows are deleted by the gateway)."""
+        vi = intent.lang == "vi"
+        prefs = session.prefs
+        if intent.explicit_product_ids:
+            targets = await self._payloads(self._targets(session, intent))
+            skus = {str(t.payload.get(S.P_ITEM_ID, "")) for t in targets}
+            pids = {t.product_id for t in targets}
+            session.events = [e for e in session.events if e.sku not in skus]
+            session.pending_events = [e for e in session.pending_events if e.sku not in skus]
+            for pid in pids:
+                session.neighbour_cache.pop(pid, None)
+            prefs.filters = prefs.filters.with_(exclude_product_ids=tuple(i for i in prefs.filters.exclude_product_ids if i not in pids))
+            text = "Đã quên phản hồi của bạn về sản phẩm này." if vi else "Forgot your feedback on that product."
+        else:
+            session.events.clear()
+            session.pending_events.clear()
+            session.neighbour_cache.clear()
+            prefs.filters = prefs.filters.without_exclusions()
+            text = "Đã xóa toàn bộ sở thích mình đã ghi nhớ." if vi else "Cleared everything I remembered about your taste."
+        session.candidate_pool, session.pool_key = [], None  # the cached pool may have been built without the forgotten items
+        resp = self._plain(session, "forget", intent.lang, text)
+        resp.meta["forgot"] = sorted(intent.explicit_product_ids) or "all"
+        return resp
 
     # ---- explain ---------------------------------------------------------------------
     async def _payloads(self, targets: list[ShownProduct]) -> list[ShownProduct]:

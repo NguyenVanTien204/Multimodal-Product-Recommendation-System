@@ -15,6 +15,7 @@ Trên bộ H&M (mẫu 50.000 khách, catalog 105.542 sản phẩm, dự đoán g
 | [`03_experiments_and_results.md`](03_experiments_and_results.md) | Toàn bộ thực nghiệm E0–E13 có thứ tự (v1 vs v2, các thăm dò, 3 lần chạy Kaggle, kết quả cuối, hạn chế, bài học) |
 | [`04_notebook_guide.md`](04_notebook_guide.md) | Cách chạy 4 notebook trên Kaggle, biến môi trường, công thức tái lập từng cấu hình, quy ước bảo trì |
 | [`05_thesis_plan.md`](05_thesis_plan.md) | Luận điểm được/không được khẳng định, thí nghiệm còn thiếu, bảng/hình đề xuất, quyết định cần chốt, ánh xạ sang các chương luận văn, Q&A phản biện |
+| [`06_web_migration.md`](06_web_migration.md) | Chuyển web, RAG và recommender sang H&M: catalog cửa hàng (72.811 sản phẩm, giá/nhóm khách là quy ước), mô hình phục vụ khớp notebook, review minh hoạ mượn từ Amazon (phương pháp, số liệu, hạn chế), kiểm chứng và giới hạn |
 | [`results/`](results/) | Kết quả gốc: `retrieval_metrics.json`, `reranker_metrics.json`, `retrieval_history.json`, `dataset_stats.json`, `reranker_lgbm.txt` |
 
 Nhật ký diễn tiến theo ngày: [`../logs/2026-10-05_hm_coldstart_sampled_eval.md`](../logs/2026-10-05_hm_coldstart_sampled_eval.md).

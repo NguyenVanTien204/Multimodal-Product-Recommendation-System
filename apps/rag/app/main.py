@@ -8,6 +8,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from datn.agent.orchestrator import ChatAgent, ChatRequest, ChatResponse
+from datn.agent.preferences import PreferenceEvent
 from datn.agent.recommender_client import RecommenderClient
 from datn.agent.session import SessionStore
 from datn.rag.evidence import ReviewRetriever
@@ -25,6 +26,7 @@ from .schemas import (
     ChatIn,
     ChatOut,
     CompareIn,
+    EventIn,
     ExplainIn,
     FiltersIn,
     HealthOut,
@@ -120,6 +122,10 @@ def _out(resp: ChatResponse) -> ChatOut:
                 image_url=p.get(S.P_IMAGE_URL),
                 avg_rating=p.get(S.P_AVG_RATING),
                 review_count=int(p.get(S.P_REVIEW_COUNT, 0) or 0),
+                reviews_mock=bool(p.get(S.P_REVIEWS_MOCK, False)),
+                audience=p.get(S.P_AUDIENCE),
+                colour=p.get(S.P_COLOUR),
+                product_type=p.get(S.P_PRODUCT_TYPE),
                 score=r.score,
                 reasons=r.reasons,
                 evidence=r.evidence,
@@ -138,7 +144,12 @@ def _out(resp: ChatResponse) -> ChatOut:
         citations=resp.citations,
         meta=resp.meta,
         warnings=resp.warnings,
+        events=resp.events,
     )
+
+
+def _events(items: list[EventIn]) -> list[PreferenceEvent]:
+    return [PreferenceEvent.from_dict(e.model_dump()) for e in items]
 
 
 def _k(k: int | None) -> int:
@@ -174,6 +185,7 @@ async def chat(payload: ChatIn):
             session_id=payload.session_id,
             image=_decode_image(payload.image_base64),
             history_skus=payload.history_skus,
+            events=_events(payload.events),
             action=action,
             filters=_filters(payload.filters),
             k=_k(payload.k),

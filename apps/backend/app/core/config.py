@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 60
     qdrant_url: str = "http://localhost:6333"
+    qdrant_product_collection: str = "product_embeddings"  # H&M: hm_product_embeddings
+    hm_image_dir: str | None = None  # H&M photos (<3 digits>/<article_id>.jpg), served at /static/hm
     datn_recommender_url: str | None = None
     datn_rag_url: str | None = None  # multimodal RAG chat service (apps/rag)
     model_version: str = "reranker_v2"

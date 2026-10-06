@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from pathlib import Path
+
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .auth.router import router as auth_router
 from .cart.router import router as cart_router
@@ -9,6 +12,7 @@ from .chat.router import router as chat_router
 from .core.config import settings
 from .core.database import Base, engine
 from .orders.router import router as order_router
+from .preferences.router import router as preferences_router
 from .recommendations.router import router as recommendation_router
 
 
@@ -26,6 +30,11 @@ app.include_router(cart_router)
 app.include_router(order_router)
 app.include_router(recommendation_router)
 app.include_router(chat_router)
+app.include_router(preferences_router)
+
+
+if settings.hm_image_dir and Path(settings.hm_image_dir).is_dir():
+    app.mount("/static/hm", StaticFiles(directory=settings.hm_image_dir), name="hm-images")
 
 
 @app.get("/health")

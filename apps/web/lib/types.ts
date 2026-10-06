@@ -21,6 +21,16 @@ export interface Product {
   image_url: string | null;
   category_id: number | null;
   is_active: boolean;
+  audience?: string | null;
+  attributes?: {
+    product_type?: string;
+    product_group?: string;
+    colour?: string;
+    appearance?: string;
+    section?: string;
+    department?: string;
+    sold_28d?: number;
+  } | null;
 }
 
 export interface PaginatedProducts {
@@ -74,15 +84,20 @@ export interface ChatEvidence {
   helpful_vote: number;
   title: string | null;
   text: string;
+  is_mock?: boolean;
 }
 
 export interface ChatProduct {
   product: Product;
   score: number;
-  brand: string | null;
+  brand?: string | null;
   price_estimated: boolean;
   avg_rating: number | null;
   review_count: number;
+  reviews_mock?: boolean;
+  audience?: string | null;
+  colour?: string | null;
+  product_type?: string | null;
   reasons: string[];
   evidence: ChatEvidence[];
 }
@@ -104,7 +119,28 @@ export interface ChatRequestPayload {
   message: string;
   session_id?: string | null;
   image_base64?: string | null;
-  action?: { type: "explain" | "compare" | "similar" | "recommend"; product_id?: number; product_ids?: number[] } | null;
+  action?: {
+    type: "explain" | "compare" | "similar" | "recommend" | "feedback" | "forget";
+    product_id?: number;
+    product_ids?: number[];
+    kind?: "like" | "dislike";
+  } | null;
+}
+
+/** What the assistant remembers about the shopper (GET /me/preferences). */
+export interface PreferencesSummary {
+  liked: Product[];
+  disliked: Product[];
+  event_count: number;
+}
+
+/** `meta.preferences` of a chat answer: how the remembered taste was used for this answer. */
+export interface PreferenceUsage {
+  liked_or_engaged: number;
+  disliked: number;
+  history_used: number;
+  excluded: number;
+  penalised: number;
 }
 
 export interface ChatMessage {

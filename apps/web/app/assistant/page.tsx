@@ -20,26 +20,26 @@ export default function AssistantPage() {
       {/* HEADER BANNER */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 sm:p-8 bg-white rounded-3xl border border-slate-200 shadow-xs">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2.5">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2.5">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Agentic RAG & Multimodal Reasoning</span>
+            <span>Tư Vấn Phong Cách Trực Tuyến</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            Trợ Lý Mua Sắm Cá Nhân AI
+            Stylist Thời Trang Cá Nhân
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl leading-relaxed">
-            Tương tác bằng ngôn ngữ tự nhiên để nhận các gợi ý phối đồ, so sánh tính năng và tìm kiếm các sản phẩm phù hợp nhất trong kho dữ liệu thời trang Amazon.
+            Nhận gợi ý phối đồ theo dịp, tư vấn chọn form dáng, chất liệu hoặc tải lên hình ảnh trang phục mẫu bạn yêu thích để tìm kiếm thiết kế phù hợp nhất tại ShopSense.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600">
           <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs font-medium">
             <Zap className="w-4 h-4 text-emerald-600" />
-            <span>Phản hồi tức thì</span>
+            <span>Tư vấn tức thì</span>
           </div>
           <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs font-medium">
             <ShieldCheck className="w-4 h-4 text-teal-600" />
-            <span>Có căn cứ dữ liệu thực</span>
+            <span>Chuẩn gu thời trang</span>
           </div>
         </div>
       </div>

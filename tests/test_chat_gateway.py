@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import time
 
 import pytest
 
@@ -22,8 +23,11 @@ database = importlib.import_module("backend_app.core.database")
 config = importlib.import_module("backend_app.core.config")
 chat_router = importlib.import_module("backend_app.chat.router")
 catalog_models = importlib.import_module("backend_app.catalog.models")
-for module in ("auth", "cart", "orders"):  # register every table on Base.metadata
+for module in ("auth", "cart", "orders", "preferences"):  # register every table on Base.metadata
     importlib.import_module(f"backend_app.{module}.models")
+auth_models = importlib.import_module("backend_app.auth.models")
+pref_models = importlib.import_module("backend_app.preferences.models")
+security = importlib.import_module("backend_app.core.security")
 
 
 class FakeResponse:
@@ -118,7 +122,7 @@ def test_forwards_action_and_filters(env, monkeypatch):
     env.post("/chat", json={"action": {"type": "explain", "product_id": 1}, "filters": {"max_price": 100000}})
     payload = sent[0][1]
     assert payload["action"] == {"type": "explain", "product_id": 1, "product_ids": []}  # RAG resolves product_id when the list is empty
-    assert payload["filters"] == {"max_price": 100000.0, "brands": []}
+    assert payload["filters"] == {"max_price": 100000.0, "brands": [], "audiences": [], "colours": []}
 
 
 def test_rag_down_falls_back_to_keyword_search(env, monkeypatch):
@@ -154,3 +158,101 @@ def test_unconfigured_rag_uses_fallback(env, monkeypatch):
 def test_chat_health_when_unconfigured(env, monkeypatch):
     monkeypatch.setattr(config.settings, "datn_rag_url", None)
     assert env.get("/chat/health").json() == {"enabled": False}
+
+
+# ---- taste memory ---------------------------------------------------------------------------
+@pytest.fixture
+def member(env):
+    """(client, auth headers, db session) for a registered user; the db session is the one the app uses."""
+    gen = main.app.dependency_overrides[database.get_db]()
+    db = next(gen)
+    user = auth_models.User(email="a@b.vn", password_hash="x", full_name="A")
+    db.add(user)
+    db.commit()
+    yield env, {"Authorization": f"Bearer {security.create_access_token(user.id)}"}, db, user
+    gen.close()
+
+
+def _events(db, user):
+    rows = db.query(pref_models.PreferenceEvent).filter_by(user_id=user.id).all()
+    return sorted((e.product_id, e.kind, e.event_id) for e in rows)
+
+
+def test_chat_sends_stored_events_and_persists_new_ones(member, monkeypatch):
+    client, headers, db, user = member
+    db.add(pref_models.PreferenceEvent(user_id=user.id, product_id=1, event_id="old", kind="like", ts=time.time() - 60, source="web"))
+    db.commit()
+    reply = {
+        **rag_payload([1]),
+        "events": [
+            {"event_id": "e1", "sku": "B0B", "kind": "dislike", "ts": time.time(), "source": "chat"},
+            {"event_id": "e2", "sku": "NOT-IN-SHOP", "kind": "like", "ts": time.time(), "source": "chat"},
+        ],
+    }
+    sent = []
+    monkeypatch.setattr(chat_router.httpx, "AsyncClient", fake_async_client(FakeResponse(200, reply), sink=sent))
+
+    assert client.post("/chat", json={"message": "giày"}, headers=headers).status_code == 200
+    assert [(e["sku"], e["kind"], e["event_id"]) for e in sent[0][1]["events"]] == [("B0A", "like", "old")]
+    assert _events(db, user) == [(1, "like", "old"), (2, "dislike", "e1")]  # unknown SKU dropped
+
+    client.post("/chat", json={"message": "giày"}, headers=headers)  # the same relayed event is stored once
+    assert _events(db, user) == [(1, "like", "old"), (2, "dislike", "e1")]
+    assert {e["event_id"] for e in sent[1][1]["events"]} == {"old", "e1"}
+
+
+def test_anonymous_chat_sends_no_events_and_stores_nothing(env, monkeypatch):
+    sent = []
+    reply = {**rag_payload([1]), "events": [{"event_id": "e1", "sku": "B0B", "kind": "dislike", "ts": time.time(), "source": "chat"}]}
+    monkeypatch.setattr(chat_router.httpx, "AsyncClient", fake_async_client(FakeResponse(200, reply), sink=sent))
+    assert env.post("/chat", json={"message": "giày"}).status_code == 200
+    assert sent[0][1]["events"] == []
+
+
+def test_feedback_action_is_forwarded(env, monkeypatch):
+    sent = []
+    monkeypatch.setattr(chat_router.httpx, "AsyncClient", fake_async_client(FakeResponse(200, rag_payload([1])), sink=sent))
+    env.post("/chat", json={"action": {"type": "feedback", "kind": "dislike", "product_id": 2}})
+    assert sent[0][1]["action"] == {"type": "feedback", "kind": "dislike", "product_id": 2, "product_ids": []}
+    assert env.post("/chat", json={"action": {"type": "feedback", "kind": "meh", "product_id": 2}}).status_code == 422
+
+
+def test_forget_action_deletes_stored_rows_before_forwarding(member, monkeypatch):
+    client, headers, db, user = member
+    for pid, eid in ((1, "a"), (2, "b")):
+        db.add(pref_models.PreferenceEvent(user_id=user.id, product_id=pid, event_id=eid, kind="dislike", ts=time.time(), source="chat"))
+    db.commit()
+    sent = []
+    monkeypatch.setattr(chat_router.httpx, "AsyncClient", fake_async_client(FakeResponse(200, rag_payload([1])), sink=sent))
+
+    client.post("/chat", json={"action": {"type": "forget", "product_id": 1}}, headers=headers)
+    assert _events(db, user) == [(2, "dislike", "b")]
+    assert [e["event_id"] for e in sent[0][1]["events"]] == ["b"]  # the forgotten row is not sent back to RAG
+
+    client.post("/chat", json={"action": {"type": "forget"}}, headers=headers)
+    assert _events(db, user) == [] and sent[1][1]["events"] == []
+
+
+def test_preferences_endpoints_show_and_forget_what_is_remembered(member):
+    client, headers, db, user = member
+    assert client.post("/me/preferences/events", json={"product_id": 1, "kind": "like"}, headers=headers).status_code == 201
+    assert client.post("/me/preferences/events", json={"product_id": 2, "kind": "dislike"}, headers=headers).status_code == 201
+    body = client.get("/me/preferences", headers=headers).json()
+    assert [p["id"] for p in body["liked"]] == [1] and [p["id"] for p in body["disliked"]] == [2] and body["event_count"] == 2
+
+    client.post("/me/preferences/events", json={"product_id": 1, "kind": "dislike"}, headers=headers)  # newest verdict wins
+    body = client.get("/me/preferences", headers=headers).json()
+    assert body["liked"] == [] and sorted(p["id"] for p in body["disliked"]) == [1, 2]
+
+    assert client.delete("/me/preferences/1", headers=headers).status_code == 204
+    assert [p["id"] for p in client.get("/me/preferences", headers=headers).json()["disliked"]] == [2]
+    assert client.delete("/me/preferences", headers=headers).status_code == 204
+    assert _events(db, user) == []
+
+
+def test_preferences_validation_and_auth(member):
+    client, headers, _, _ = member
+    assert client.post("/me/preferences/events", json={"product_id": 1, "kind": "purchase"}, headers=headers).status_code == 422  # orders feed the model, not this endpoint
+    assert client.post("/me/preferences/events", json={"product_id": 3, "kind": "like"}, headers=headers).status_code == 404  # inactive product
+    assert client.post("/me/preferences/events", json={"product_id": 999, "kind": "like"}, headers=headers).status_code == 404
+    assert client.get("/me/preferences").status_code in (401, 403)

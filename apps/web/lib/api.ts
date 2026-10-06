@@ -1,4 +1,4 @@
-import { AiRecommendationItem, Cart, Category, ChatApiResponse, ChatRequestPayload, Order, PaginatedProducts, Product, SimilarProduct, SystemHealth, User } from "./types";
+import { AiRecommendationItem, Cart, Category, ChatApiResponse, ChatRequestPayload, Order, PaginatedProducts, PreferencesSummary, Product, SimilarProduct, SystemHealth, User } from "./types";
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from "./demo-fixtures";
 
 
@@ -156,6 +156,8 @@ export async function getCategories(): Promise<Category[]> {
 export async function getProducts(params?: {
   q?: string;
   category_id?: number;
+  audience?: string;
+  sort?: "bestseller" | "price_asc" | "price_desc" | "id";
   page?: number;
   page_size?: number;
 }): Promise<PaginatedProducts> {
@@ -169,6 +171,8 @@ export async function getProducts(params?: {
     ];
     if (params?.q) queryParts.push(`q=${encodeURIComponent(params.q)}`);
     if (params?.category_id) queryParts.push(`category_id=${params.category_id}`);
+    if (params?.audience) queryParts.push(`audience=${encodeURIComponent(params.audience)}`);
+    if (params?.sort) queryParts.push(`sort=${params.sort}`);
 
     const queryString = `?${queryParts.join("&")}`;
     const res = await fetchWithAuth(`/products${queryString}`, { cache: "no-store" });
@@ -333,6 +337,17 @@ export function formatVND(amount: number): string {
     style: "currency",
     currency: "VND",
   }).format(amount);
+}
+
+// ----------------- TASTE MEMORY (what the chat assistant remembers) -----------------
+export async function getMyPreferences(): Promise<PreferencesSummary | null> {
+  try {
+    const res = await fetchWithAuth("/me/preferences");
+    if (!res.ok) return null; // anonymous: memory lives only in the chat session
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 // ----------------- MULTIMODAL RAG CHAT -----------------

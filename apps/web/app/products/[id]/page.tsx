@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { audienceLabel } from "@/lib/labels";
 import Link from "next/link";
 import { 
   ArrowLeft, 
@@ -178,6 +179,16 @@ export default function ProductDetailPage() {
               <p className="text-sm text-slate-600 leading-relaxed">
                 {product.description || "Chưa có mô tả chi tiết."}
               </p>
+              <p className="mt-3 text-xs text-slate-500 leading-relaxed">
+                {[
+                  product.attributes?.product_type && `Loại: ${product.attributes.product_type}`,
+                  product.attributes?.colour && `Màu: ${product.attributes.colour}`,
+                  product.audience && `Dành cho: ${audienceLabel(product.audience)}`,
+                  product.attributes?.section && `Bộ sưu tập: ${product.attributes.section}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2 py-3 px-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
@@ -263,7 +274,7 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* SIMILAR PRODUCTS SECTION (QDRANT VECTOR SEARCH) */}
+      {/* SIMILAR PRODUCTS SECTION */}
       <div className="border-t border-slate-100 pt-8">
         <div className="flex items-center gap-2.5 mb-6">
           <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -271,20 +282,20 @@ export default function ProductDetailPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <span>Sản Phẩm Tương Tự Qua Vector Embeddings</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-medium">
-                Qdrant Cosine
+              <span>Sản Phẩm Tương Tự</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                Cùng Phong Cách
               </span>
             </h2>
             <p className="text-xs text-slate-500">
-              Gợi ý dựa trên khoảng cách vector đa phương thức trong cơ sở dữ liệu Qdrant
+              Các thiết kế tương đồng về kiểu dáng và chất liệu bạn có thể quan tâm
             </p>
           </div>
         </div>
 
         {similarItems.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {similarItems.map(({ product: sp, score }) => (
+            {similarItems.map(({ product: sp }) => (
               <Link
                 key={sp.id}
                 href={`/products/${sp.id}`}
@@ -299,9 +310,6 @@ export default function ProductDetailPage() {
                       className="object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : null}
-                  <span className="absolute bottom-1.5 right-1.5 px-2 py-0.5 text-[10px] font-bold rounded bg-slate-900/80 text-white">
-                    Độ khớp {(score * 100).toFixed(0)}%
-                  </span>
                 </div>
                 <h4 className="text-xs font-semibold text-slate-800 line-clamp-1 group-hover:text-emerald-700 mb-1">
                   {sp.name}
@@ -314,7 +322,7 @@ export default function ProductDetailPage() {
           </div>
         ) : (
           <div className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs text-slate-500">
-            Chưa tìm thấy vector tương đồng khác trong kho dữ liệu Qdrant.
+            Hiện chưa có gợi ý tương tự khác cho sản phẩm này.
           </div>
         )}
       </div>

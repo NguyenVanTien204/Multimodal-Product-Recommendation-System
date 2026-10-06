@@ -153,24 +153,28 @@ class HybridSearcher:
         points, _ = self.client.scroll(self.products, scroll_filter=flt, limit=len(skus), with_payload=True)
         return {str(p.payload.get(S.P_ITEM_ID)): Hit(int(p.id), dict(p.payload)) for p in points}
 
-    def top_brands(self, limit: int = 3000) -> dict[str, int]:
-        """Brand -> product count, via Qdrant's facet API (>= v1.12)."""
+    def facet_counts(self, key: str, limit: int = 3000) -> dict[str, int]:
+        """Payload value -> product count, via Qdrant's facet API (>= v1.12). {} if the field is not indexed."""
         try:
-            res = self.client.facet(self.products, key=S.P_BRAND, limit=limit)
+            res = self.client.facet(self.products, key=key, limit=limit)
             return {str(h.value): int(h.count) for h in res.hits}
         except Exception as exc:  # noqa: BLE001
-            log.warning("brand facet unavailable: %s", exc)
+            log.warning("facet %s unavailable: %s", key, exc)
             return {}
 
+    def top_brands(self, limit: int = 3000) -> dict[str, int]:
+        """Brand -> product count (empty for catalogs without brands, e.g. H&M)."""
+        return self.facet_counts(S.P_BRAND, limit)
+
     def popular(self, filters: SearchFilters | None = None, k: int = 10) -> list[Hit]:
-        """Most-reviewed products (popularity prior), used when there is no query and no history."""
+        """Most popular products (prior), used when there is no query and no history. Amazon: most reviewed; H&M: best sellers."""
         flt = filters.to_qdrant() if filters else None
         points, _ = self.client.scroll(
             self.products,
             scroll_filter=flt,
             limit=k,
             with_payload=True,
-            order_by=qm.OrderBy(key=S.P_REVIEW_COUNT, direction=qm.Direction.DESC),
+            order_by=qm.OrderBy(key=S.POPULARITY_KEY, direction=qm.Direction.DESC),
         )
         return [Hit(int(p.id), dict(p.payload), 1.0 / (RRF_K + i)) for i, p in enumerate(points, 1)]
 

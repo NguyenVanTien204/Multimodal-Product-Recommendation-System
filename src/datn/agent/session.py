@@ -8,8 +8,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..retrieval.filters import SearchFilters
+from .preferences import PreferenceEvent
 
 MAX_TURNS = 20
+MAX_EVENTS = 200
 
 
 @dataclass
@@ -34,7 +36,7 @@ class Preferences:
             "query": self.display_query or self.query,
             "colors": list(self.colors),
             "filters": self.filters.to_dict(),
-            "filter_chips": self.filters.describe() + [f"Màu: {c}" for c in self.colors],
+            "filter_chips": self.filters.describe() + ([] if self.filters.colours else [f"Màu: {c}" for c in self.colors]),
         }
 
 
@@ -50,7 +52,10 @@ class Session:
     pool_key: tuple | None = None  # (semantic query, image digest) the pool was built for
     pool_filters: SearchFilters = field(default_factory=SearchFilters)
     seen_product_ids: list[int] = field(default_factory=list)
-    focus_history_skus: list[str] = field(default_factory=list)  # items the user engaged with this session, oldest first
+    events: list[PreferenceEvent] = field(default_factory=list)  # feedback recorded in this session, oldest first
+    pending_events: list[PreferenceEvent] = field(default_factory=list)  # recorded during the current turn (returned to the shop DB)
+    sku_product_ids: dict[str, int] = field(default_factory=dict)  # sku -> product id, resolved lazily for negatives
+    neighbour_cache: dict[int, dict[int, int]] = field(default_factory=dict)  # disliked product id -> {neighbour id: rank}
 
     def add_turn(self, role: str, content: str) -> None:
         self.turns.append({"role": role, "content": content})
@@ -64,10 +69,21 @@ class Session:
                 out.append(self.last_results[n - 1])
         return out
 
+    def record(self, sku: str, kind: str) -> PreferenceEvent | None:
+        """Remember one interaction. Repeating the same kind on the same item back-to-back is ignored."""
+        if not sku:
+            return None
+        if self.events and self.events[-1].sku == sku and self.events[-1].kind == kind:
+            return None
+        event = PreferenceEvent(sku=sku, kind=kind)
+        self.events.append(event)
+        self.pending_events.append(event)
+        del self.events[:-MAX_EVENTS]
+        return event
+
     def engage(self, sku: str) -> None:
-        if sku and (not self.focus_history_skus or self.focus_history_skus[-1] != sku):
-            self.focus_history_skus.append(sku)
-            del self.focus_history_skus[:-20]
+        """Implicit interest: the user asked about / compared / looked for items like this one."""
+        self.record(sku, "click")
 
 
 class SessionStore:

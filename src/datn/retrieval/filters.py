@@ -6,6 +6,9 @@ from typing import Any, Mapping
 from . import schema as S
 
 
+AUDIENCE_LABELS_VI = {"women": "Nữ", "men": "Nam", "divided": "Teen (Divided)", "kids": "Trẻ em", "baby": "Em bé", "other": "Khác"}
+
+
 @dataclass(frozen=True)
 class SearchFilters:
     """Hard, structured constraints applied on top of semantic retrieval.
@@ -22,6 +25,9 @@ class SearchFilters:
     category_slugs: tuple[str, ...] = ()
     min_rating: float | None = None
     exclude_product_ids: tuple[int, ...] = ()
+    # H&M facets (empty = no constraint): audience in women|men|divided|kids|baby|other, colour = H&M colour_group_name
+    audiences: tuple[str, ...] = ()
+    colours: tuple[str, ...] = ()
 
     def is_empty(self) -> bool:
         return not (
@@ -31,6 +37,8 @@ class SearchFilters:
             or self.category_slugs
             or self.min_rating is not None
             or self.exclude_product_ids
+            or self.audiences
+            or self.colours
         )
 
     def with_(self, **changes: Any) -> "SearchFilters":
@@ -53,6 +61,8 @@ class SearchFilters:
             category_slugs=tuple(data.get("category_slugs") or ()),
             min_rating=data.get("min_rating"),
             exclude_product_ids=tuple(int(x) for x in (data.get("exclude_product_ids") or ())),
+            audiences=tuple(data.get("audiences") or ()),
+            colours=tuple(data.get("colours") or ()),
         )
 
     def matches(self, payload: Mapping[str, Any], product_id: int | None = None) -> bool:
@@ -72,6 +82,10 @@ class SearchFilters:
             rating = payload.get(S.P_AVG_RATING)
             if rating is None or rating < self.min_rating:
                 return False
+        if self.audiences and payload.get(S.P_AUDIENCE) not in self.audiences:
+            return False
+        if self.colours and (payload.get(S.P_COLOUR) or "").lower() not in {c.lower() for c in self.colours}:
+            return False
         pid = product_id if product_id is not None else payload.get(S.P_PRODUCT_ID)
         if pid is not None and pid in self.exclude_product_ids:
             return False
@@ -90,6 +104,10 @@ class SearchFilters:
             must.append(qm.FieldCondition(key=S.P_CATEGORY_SLUG, match=qm.MatchAny(any=list(self.category_slugs))))
         if self.min_rating is not None:
             must.append(qm.FieldCondition(key=S.P_AVG_RATING, range=qm.Range(gte=self.min_rating)))
+        if self.audiences:
+            must.append(qm.FieldCondition(key=S.P_AUDIENCE, match=qm.MatchAny(any=list(self.audiences))))
+        if self.colours:
+            must.append(qm.FieldCondition(key=S.P_COLOUR, match=qm.MatchAny(any=list(self.colours))))
         if self.exclude_product_ids:
             must_not.append(qm.HasIdCondition(has_id=list(self.exclude_product_ids)))
         if not must and not must_not:
@@ -111,6 +129,10 @@ class SearchFilters:
             out.append("Danh mục: " + ", ".join(self.category_slugs))
         if self.min_rating is not None:
             out.append(f"Đánh giá ≥ {self.min_rating:g}★")
+        if self.audiences:
+            out.append("Dành cho: " + ", ".join(AUDIENCE_LABELS_VI.get(a, a) for a in self.audiences))
+        if self.colours:
+            out.append("Màu: " + ", ".join(self.colours))
         return out
 
 

@@ -8,8 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HF_HOME=/hf_cache TOKENIZERS_PA
 RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 COPY pyproject.toml ./
+RUN mkdir -p src/datn && touch src/datn/__init__.py && pip install --no-cache-dir ".[rag]"
 COPY src ./src
-RUN pip install --no-cache-dir ".[rag]"
+RUN pip install --no-cache-dir --no-deps --force-reinstall .
 
 COPY apps/rag/requirements.txt ./rag-requirements.txt
 RUN pip install --no-cache-dir -r rag-requirements.txt

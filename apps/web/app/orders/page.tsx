@@ -102,7 +102,7 @@ export default function OrdersPage() {
             <span>Lịch Sử Đơn Hàng Của Bạn</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Dữ liệu đơn hàng đồng bộ trực tiếp từ bảng orders PostgreSQL
+            Theo dõi tiến độ giao nhận và lịch sử mua sắm của bạn
           </p>
         </div>
 

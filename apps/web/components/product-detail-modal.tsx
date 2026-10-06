@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { audienceLabel, isLocalImage } from "@/lib/labels";
 import { 
   X, 
   ShoppingCart, 
@@ -104,6 +105,7 @@ export function ProductDetailModal({
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover object-center"
+                unoptimized={isLocalImage(product.image_url)}
                 priority
               />
             ) : (
@@ -149,6 +151,16 @@ export function ProductDetailModal({
                 </h4>
                 <p className="text-sm text-slate-600 leading-relaxed max-h-40 overflow-y-auto">
                   {product.description || "Chưa có mô tả chi tiết cho sản phẩm này."}
+                </p>
+                <p className="mt-3 text-xs text-slate-500 leading-relaxed">
+                  {[
+                    product.attributes?.product_type && `Loại: ${product.attributes.product_type}`,
+                    product.attributes?.colour && `Màu: ${product.attributes.colour}`,
+                    product.audience && `Dành cho: ${audienceLabel(product.audience)}`,
+                    product.attributes?.section && `Bộ sưu tập: ${product.attributes.section}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
 
@@ -236,7 +248,7 @@ export function ProductDetailModal({
           </div>
         </div>
 
-        {/* BOTTOM SECTION: AI SIMILAR PRODUCTS (QDRANT VECTOR SEARCH) */}
+        {/* BOTTOM SECTION: SIMILAR PRODUCTS */}
         <div className="border-t border-slate-100 pt-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
@@ -246,12 +258,12 @@ export function ProductDetailModal({
               <div>
                 <h3 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
                   <span>Sản Phẩm Tương Tự</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
-                    Qdrant Vector AI
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                    Cùng Phong Cách
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Tìm kiếm dựa trên độ tương đồng ngữ nghĩa vector đa phương thức
+                  Gợi ý các thiết kế có kiểu dáng và màu sắc phù hợp
                 </p>
               </div>
             </div>
@@ -259,11 +271,11 @@ export function ProductDetailModal({
 
           {loadingSimilar ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-6 text-center text-xs text-slate-500">
-              <div className="col-span-full animate-pulse">Đang tìm vector tương đồng trong Qdrant...</div>
+              <div className="col-span-full animate-pulse">Đang tìm kiếm sản phẩm tương tự...</div>
             </div>
           ) : similarItems.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {similarItems.slice(0, 4).map(({ product: sp, score }) => (
+              {similarItems.slice(0, 4).map(({ product: sp }) => (
                 <div
                   key={sp.id}
                   onClick={() => onSelectProduct(sp)}
@@ -278,9 +290,6 @@ export function ProductDetailModal({
                         className="object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : null}
-                    <span className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-900/80 text-white">
-                      Độ khớp: {(score * 100).toFixed(0)}%
-                    </span>
                   </div>
                   <h5 className="text-xs font-semibold text-slate-800 line-clamp-1 group-hover:text-emerald-700 mb-1">
                     {sp.name}
@@ -293,7 +302,7 @@ export function ProductDetailModal({
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
-              Chưa có dữ liệu vector tương đồng cho sản phẩm này trong kho Qdrant.
+              Hiện chưa có gợi ý tương tự cho sản phẩm này.
             </div>
           )}
         </div>

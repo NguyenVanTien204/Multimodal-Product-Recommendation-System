@@ -56,7 +56,7 @@ export function CartDrawer() {
                   <ShoppingBag className="w-16 h-16 text-slate-300 stroke-1" />
                   <h4 className="font-semibold text-slate-800">Chưa đăng nhập</h4>
                   <p className="text-xs text-slate-500 max-w-xs">
-                    Đăng nhập tài khoản để đồng bộ và lưu trữ giỏ hàng trong cơ sở dữ liệu PostgreSQL.
+                    Đăng nhập để lưu trữ giỏ hàng và theo dõi đơn mua thuận tiện hơn.
                   </p>
                 </div>
               ) : items.length === 0 ? (
@@ -152,7 +152,7 @@ export function CartDrawer() {
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-500">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Giao dịch khóa dòng Postgres an toàn và chuẩn xác</span>
+                  <span>Bảo mật thanh toán &amp; giao dịch an toàn 100%</span>
                 </div>
 
                 <button

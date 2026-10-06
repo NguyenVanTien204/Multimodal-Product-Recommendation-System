@@ -20,6 +20,7 @@ class Review:
     title: str | None
     text: str
     score: float = 0.0  # query relevance (cosine), 0 when retrieved without a query
+    is_mock: bool = False  # borrowed from another catalog (H&M has no review text)
 
     def snippet(self, limit: int = 320) -> str:
         body = " ".join(self.text.split())
@@ -36,6 +37,7 @@ def _to_review(point, score: float = 0.0) -> Review:
         title=p.get(S.R_TITLE),
         text=str(p.get(S.R_TEXT, "")),
         score=score,
+        is_mock=bool(p.get(S.R_IS_MOCK, False)),
     )
 
 

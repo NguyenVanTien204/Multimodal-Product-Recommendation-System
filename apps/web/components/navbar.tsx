@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -8,17 +8,13 @@ import {
   Sparkles, 
   Scale, 
   Package, 
-  Bot, 
   User as UserIcon, 
   LogOut, 
   ShieldCheck, 
-  Database,
-  Menu,
-  X
+  Menu, 
+  X 
 } from "lucide-react";
 import { useAuth, useCart, useCompare } from "@/lib/context";
-import { getSystemHealth } from "@/lib/api";
-import { SystemHealth } from "@/lib/types";
 
 export function Navbar({ onOpenAuth }: { onOpenAuth: () => void }) {
   const pathname = usePathname();
@@ -26,26 +22,13 @@ export function Navbar({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { itemCount, setIsDrawerOpen } = useCart();
   const { compareItems } = useCompare();
 
-  const [systemHealth, setSystemHealth] = useState<SystemHealth>({
-    api: true,
-    postgres: true,
-    qdrant: true,
-  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    getSystemHealth().then((h) => setSystemHealth(h));
-    const interval = setInterval(() => {
-      getSystemHealth().then((h) => setSystemHealth(h));
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   const navLinks = [
     { href: "/", label: "Khám Phá", icon: ShoppingBag },
     { href: "/compare", label: "So Sánh", icon: Scale, badge: compareItems.length },
     { href: "/orders", label: "Đơn Hàng", icon: Package },
-    { href: "/assistant", label: "Trợ Lý AI", icon: Bot, isHighlight: true },
+    { href: "/assistant", label: "Tư Vấn Phong Cách", icon: Sparkles, isHighlight: true },
   ];
 
   if (user?.is_admin) {
@@ -53,19 +36,16 @@ export function Navbar({ onOpenAuth }: { onOpenAuth: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/85 backdrop-blur-md border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* LOGO */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-200">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl bg-slate-950 flex items-center justify-center shadow-sm group-hover:bg-emerald-600 transition-colors duration-200">
+            <span className="font-extrabold text-white text-base tracking-tighter">S</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-xl tracking-tight text-slate-900 group-hover:text-emerald-700 transition-colors">
+            <span className="font-extrabold text-xl tracking-tight text-slate-950 group-hover:text-emerald-700 transition-colors">
               ShopSense
-            </span>
-            <span className="hidden sm:inline-flex items-center text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-              AI MultiModal
             </span>
           </div>
         </Link>
@@ -99,27 +79,8 @@ export function Navbar({ onOpenAuth }: { onOpenAuth: () => void }) {
           })}
         </nav>
 
-        {/* RIGHT ACTIONS: SYSTEM STATUS, CART, AUTH */}
+        {/* RIGHT ACTIONS: CART, AUTH */}
         <div className="flex items-center gap-2.5">
-          {/* SYSTEM HEALTH BADGE */}
-          <div
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-slate-50 text-slate-600 border border-slate-200 cursor-help transition-colors hover:bg-slate-100"
-            title={`API: ${systemHealth.api ? "OK" : "ERR"} | Postgres: ${
-              systemHealth.postgres ? "OK" : "ERR"
-            } | Qdrant: ${systemHealth.qdrant ? "OK" : "ERR"}`}
-          >
-            <Database className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[11px] font-medium">DB & Vector</span>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                systemHealth.postgres && systemHealth.qdrant
-                  ? "bg-emerald-500 animate-pulse"
-                  : systemHealth.postgres
-                  ? "bg-amber-500"
-                  : "bg-rose-500"
-              }`}
-            />
-          </div>
 
           {/* CART BUTTON */}
           <button

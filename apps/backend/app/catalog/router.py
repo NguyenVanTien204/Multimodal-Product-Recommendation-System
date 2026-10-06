@@ -34,6 +34,10 @@ def create_category(payload: CategoryIn, db: Session = Depends(get_db), _: User 
 def products(
     q: str | None = None,
     category_id: int | None = None,
+    audience: str | None = None,
+    colour: str | None = None,
+    product_type: str | None = None,
+    sort: str = "id",
     page: int = 1,
     page_size: int = 24,
     db: Session = Depends(get_db)
@@ -55,11 +59,29 @@ def products(
         base_query = base_query.where(Product.category_id == category_id)
         count_query = count_query.where(Product.category_id == category_id)
 
+    if audience:
+        base_query = base_query.where(Product.audience == audience)
+        count_query = count_query.where(Product.audience == audience)
+
+    for key, value in (("colour", colour), ("product_type", product_type)):
+        if value:
+            facet = Product.attributes[key].as_string() == value
+            base_query = base_query.where(facet)
+            count_query = count_query.where(facet)
+
     total = db.scalar(count_query) or 0
     total_pages = max(1, (total + page_size - 1) // page_size)
 
     offset = (page - 1) * page_size
-    items = list(db.scalars(base_query.order_by(Product.id.asc()).offset(offset).limit(page_size)))
+    if sort == "bestseller":  # units sold in the 28 days before the shop clock
+        order = (Product.attributes["sold_28d"].as_integer().desc().nulls_last(), Product.id.asc())
+    elif sort == "price_asc":
+        order = (Product.price.asc(), Product.id.asc())
+    elif sort == "price_desc":
+        order = (Product.price.desc(), Product.id.asc())
+    else:
+        order = (Product.id.asc(),)
+    items = list(db.scalars(base_query.order_by(*order).offset(offset).limit(page_size)))
 
     return PaginatedProductsOut(
         items=items,

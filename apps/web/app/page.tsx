@@ -17,6 +17,7 @@ import { ProductCard } from "@/components/product-card";
 import { ProductDetailModal } from "@/components/product-detail-modal";
 import { AiChatAssistant } from "@/components/ai-chat-assistant";
 import { Pagination } from "@/components/pagination";
+import { AUDIENCES } from "@/lib/labels";
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -34,7 +35,8 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
+  const [selectedAudience, setSelectedAudience] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"bestseller" | "price_asc" | "price_desc">("bestseller");
   const [onlyInStock, setOnlyInStock] = useState(false);
 
   // Selected product modal
@@ -58,6 +60,8 @@ export default function HomePage() {
       const res = await getProducts({
         q: submittedQuery || undefined,
         category_id: selectedCategoryId || undefined,
+        audience: selectedAudience || undefined,
+        sort: sortBy,
         page: page,
         page_size: pageSize,
       });
@@ -75,10 +79,15 @@ export default function HomePage() {
 
   useEffect(() => {
     loadProducts(currentPage);
-  }, [selectedCategoryId, submittedQuery, currentPage]);
+  }, [selectedCategoryId, selectedAudience, sortBy, submittedQuery, currentPage]);
 
   const handleCategorySelect = (catId: number | null) => {
     setSelectedCategoryId(catId);
+    setCurrentPage(1);
+  };
+
+  const handleAudienceSelect = (key: string | null) => {
+    setSelectedAudience(key);
     setCurrentPage(1);
   };
 
@@ -92,8 +101,9 @@ export default function HomePage() {
     setSearchQuery("");
     setSubmittedQuery("");
     setSelectedCategoryId(null);
+    setSelectedAudience(null);
     setOnlyInStock(false);
-    setSortBy("default");
+    setSortBy("bestseller");
     setCurrentPage(1);
   };
 
@@ -105,14 +115,8 @@ export default function HomePage() {
       list = list.filter((p) => p.stock_quantity > 0);
     }
 
-    if (sortBy === "price-asc") {
-      list.sort((a, b) => Number(a.price) - Number(b.price));
-    } else if (sortBy === "price-desc") {
-      list.sort((a, b) => Number(b.price) - Number(a.price));
-    }
-
-    return list;
-  }, [products, onlyInStock, sortBy]);
+    return list; // sorting and filtering by audience/category happen on the server (all products, not just this page)
+  }, [products, onlyInStock]);
 
   const getCategoryName = (catId: number | null) => {
     if (!catId) return undefined;
@@ -128,21 +132,20 @@ export default function HomePage() {
         <div className="absolute bottom-0 right-1/3 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-xs mb-6 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-xs mb-6 animate-fade-in">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Mô Hình Gợi Ý Đa Phương Thức & Vector AI Trực Tuyến</span>
+            <span>Bộ Sưu Tập Thời Trang Xu Hướng 2026</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-tight leading-tight max-w-4xl mx-auto mb-6">
-            Mua Sắm Thông Minh Cùng{" "}
+            Định Hình Phong Cách,{" "}
             <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent">
-              Trí Tuệ Nhân Tạo
+              Tự Tin Tỏa Sáng
             </span>
           </h1>
 
-          <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
-            Hệ sinh thái thương mại điện tử đồng bộ dữ liệu thời gian thực giữa PostgreSQL,
-            Qdrant Vector Database và kho dữ liệu thời trang Amazon Reviews 2023.
+          <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto mb-8 leading-relaxed font-normal">
+            Khám phá hàng chục ngàn mẫu trang phục mới nhất với chất liệu chọn lọc, kiểu dáng thanh lịch và trải nghiệm gợi ý chuẩn phong cách riêng của bạn.
           </p>
 
           {/* SEARCH FORM HERO */}
@@ -157,7 +160,7 @@ export default function HomePage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm áo sơ mi, blazer, sneaker, đồng hồ, túi xách..."
+              placeholder="Tìm áo thun, váy hoa, quần jeans, blazer, hoodie..."
               className="flex-1 bg-transparent px-3 py-2.5 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
             />
             {searchQuery && (
@@ -181,25 +184,44 @@ export default function HomePage() {
             </button>
           </form>
 
-          {/* REAL STATS PILLS */}
+          {/* QUICK SEARCH SUGGESTIONS */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-slate-500">
+            <span className="font-medium text-slate-400">Từ khóa phổ biến:</span>
+            {["Áo sơ mi", "Váy hoa", "Quần jeans", "Blazer", "Hoodie", "Đồ thể thao"].map((keyword) => (
+              <button
+                key={keyword}
+                type="button"
+                onClick={() => {
+                  setSearchQuery(keyword);
+                  setSubmittedQuery(keyword);
+                  setCurrentPage(1);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 transition-colors shadow-2xs font-medium"
+              >
+                {keyword}
+              </button>
+            ))}
+          </div>
+
+          {/* VALUE BADGES */}
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mt-10 text-xs text-slate-600">
             <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-xs">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{totalItems.toLocaleString("vi-VN")} sản phẩm thực từ Parquet</span>
+              <span>{totalItems > 0 ? totalItems.toLocaleString("vi-VN") : "70.000+"} mẫu trang phục tuyển chọn</span>
             </div>
             <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-xs">
-              <Cpu className="w-3.5 h-3.5 text-teal-600" />
-              <span>152.086 Vector Embeddings 1024D Qdrant</span>
+              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+              <span>Gợi ý phối đồ cá nhân hóa</span>
             </div>
             <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>Gợi ý Đa Phương Thức & Sequential AI</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Đổi trả thuận tiện trong 7 ngày</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= AI RECOMMENDED SECTION (LIVE QDRANT VECTOR AI) ================= */}
+      {/* ================= RECOMMENDED SECTION ================= */}
       {aiRecommendations.length > 0 && !selectedCategoryId && !submittedQuery && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-14">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200/80">
@@ -210,12 +232,12 @@ export default function HomePage() {
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
                   <span>Gợi Ý Dành Riêng Cho Bạn</span>
-                  <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Qdrant Vector AI
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Phù Hợp Xu Hướng
                   </span>
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Phân tích ngữ nghĩa không gian vector 1024 chiều đa phương thức từ cơ sở dữ liệu Qdrant
+                  Các sản phẩm được chọn lọc dựa trên phong cách và sở thích mua sắm của bạn
                 </p>
               </div>
             </div>
@@ -246,7 +268,7 @@ export default function HomePage() {
               <span>Danh Mục Sản Phẩm</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Hiển thị <span className="text-emerald-700 font-bold">{totalItems.toLocaleString("vi-VN")}</span> sản phẩm trong cơ sở dữ liệu PostgreSQL
+              Hiển thị <span className="text-emerald-700 font-bold">{totalItems.toLocaleString("vi-VN")}</span> mẫu trang phục sẵn có
             </p>
           </div>
 
@@ -271,20 +293,37 @@ export default function HomePage() {
                 onChange={(e: any) => setSortBy(e.target.value)}
                 className="bg-transparent text-slate-800 focus:outline-none cursor-pointer text-xs font-medium"
               >
-                <option value="default">Mặc định</option>
-                <option value="price-asc">Giá: Thấp đến Cao</option>
-                <option value="price-desc">Giá: Cao đến Thấp</option>
+                <option value="bestseller">Bán chạy nhất</option>
+                <option value="price_asc">Giá: Thấp đến Cao</option>
+                <option value="price_desc">Giá: Cao đến Thấp</option>
               </select>
             </div>
 
             <button
               onClick={() => loadProducts(currentPage)}
-              title="Làm mới dữ liệu từ backend"
+              title="Làm mới danh sách sản phẩm"
               className="p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-emerald-600" : ""}`} />
             </button>
           </div>
+        </div>
+
+        {/* AUDIENCE TABS */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-5 no-scrollbar">
+          {[{ key: null as string | null, label: "Tất cả" }, ...AUDIENCES].map((a) => (
+            <button
+              key={a.key ?? "all"}
+              onClick={() => handleAudienceSelect(a.key)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                selectedAudience === a.key
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
         </div>
 
         {/* CATEGORY TABS */}

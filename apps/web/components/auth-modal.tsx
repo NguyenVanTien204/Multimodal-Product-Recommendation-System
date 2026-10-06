@@ -175,7 +175,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         {mode === "login" && (
           <div className="mt-6 pt-5 border-t border-slate-100 text-center">
             <span className="text-[11px] text-slate-500 font-medium block mb-2.5">
-              Tài khoản mẫu có sẵn trong PostgreSQL:
+              Đăng nhập nhanh (Tài khoản thử nghiệm):
             </span>
             <div className="flex gap-2">
               <button
@@ -184,7 +184,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 className="flex-1 py-1.5 px-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[11px] text-emerald-700 font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
               >
                 <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Demo User</span>
+                <span>Khách hàng mẫu</span>
               </button>
               <button
                 type="button"
@@ -192,7 +192,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 className="flex-1 py-1.5 px-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[11px] text-amber-700 font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
               >
                 <Shield className="w-3.5 h-3.5 text-amber-600" />
-                <span>Admin User</span>
+                <span>Quản trị viên</span>
               </button>
             </div>
           </div>

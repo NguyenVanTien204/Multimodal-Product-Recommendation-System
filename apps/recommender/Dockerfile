@@ -10,8 +10,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
 COPY pyproject.toml ./
+RUN mkdir -p src/datn && touch src/datn/__init__.py && pip install --no-cache-dir ".[recommenders,hm]"
 COPY src ./src
-RUN pip install --no-cache-dir ".[recommenders]"
+RUN pip install --no-cache-dir --no-deps --force-reinstall .
 
 COPY apps/recommender/requirements.txt ./recommender-requirements.txt
 RUN pip install --no-cache-dir -r recommender-requirements.txt

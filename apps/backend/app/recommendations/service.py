@@ -14,7 +14,7 @@ from ..catalog.models import Product
 from ..core.config import settings
 from ..orders.models import Order
 
-PRODUCT_COLLECTION = "product_embeddings"
+PRODUCT_COLLECTION = settings.qdrant_product_collection
 
 
 def qdrant_health() -> bool:

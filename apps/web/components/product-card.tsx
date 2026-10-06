@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { isLocalImage, productSubtitle } from "@/lib/labels";
 import { ShoppingCart, Check, Scale, Eye, Sparkles } from "lucide-react";
 import { Product } from "@/lib/types";
 import { formatVND } from "@/lib/api";
@@ -57,9 +58,9 @@ export function ProductCard({
       {/* BADGES TOP */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start pointer-events-none">
         {isAiRecommended && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-600 text-white shadow-sm">
-            <Sparkles className="w-3 h-3 text-emerald-200" />
-            <span>AI Gợi Ý {score ? `(${(score * 100).toFixed(0)}%)` : ""}</span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-950 text-white shadow-sm">
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span>Gợi ý cho bạn</span>
           </span>
         )}
         {categoryName && (
@@ -91,6 +92,7 @@ export function ProductCard({
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+            unoptimized={isLocalImage(product.image_url)}
             onError={() => setImageError(true)}
           />
         ) : (
@@ -113,7 +115,9 @@ export function ProductCard({
       <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
-            <span className="font-mono text-[11px] text-slate-400">{product.sku}</span>
+            <span className="text-[11px] text-slate-500 truncate max-w-[60%]" title={product.sku}>
+              {productSubtitle(product) || product.sku}
+            </span>
             {isOutOfStock ? (
               <span className="text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md">Hết hàng</span>
             ) : isLowStock ? (

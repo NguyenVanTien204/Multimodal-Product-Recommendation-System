@@ -25,6 +25,14 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--recreate", action="store_true")
     p.add_argument("--batch-size", type=int, default=256)
 
+    h = sub.add_parser("index-hm", help="H&M products collection (512-d; needs DATN_VECTOR_SIZE=512 DATN_PRODUCTS_COLLECTION=hm_products)")
+    h.add_argument("--serving", type=Path, default=Path("data/hm/serving"))
+    h.add_argument("--recreate", action="store_true")
+
+    hr = sub.add_parser("index-hm-reviews", help="H&M mock reviews -> reviews collection + review_count/avg_rating on products")
+    hr.add_argument("--serving", type=Path, default=Path("data/hm/serving"))
+    hr.add_argument("--keep-existing", action="store_true")
+
     r = sub.add_parser("index-reviews", help="reviews collection: Jina CLIP v2 text vectors (GPU recommended, resumable)")
     r.add_argument("--recreate", action="store_true")
     r.add_argument("--chunk-size", type=int, default=2048)
@@ -44,6 +52,14 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.cmd == "index-products":
         index_products(client, pg_dsn=args.pg_dsn, data_dir=args.data_dir, recreate=args.recreate, batch_size=args.batch_size)
+    elif args.cmd == "index-hm":
+        from .hm_indexer import index_hm_products
+
+        index_hm_products(client, pg_dsn=args.pg_dsn, serving_dir=args.serving, recreate=args.recreate)
+    elif args.cmd == "index-hm-reviews":
+        from .hm_indexer import import_hm_reviews
+
+        import_hm_reviews(client, serving_dir=args.serving, recreate=not args.keep_existing)
     elif args.cmd == "index-reviews":
         encoder = JinaClipEncoder(device=args.device)
         index_reviews(

@@ -46,6 +46,26 @@ Lưu ý Windows: dùng `127.0.0.1` thay `localhost` nếu trình duyệt/curl b�
     tar --exclude=.git --exclude=.venv --exclude=node_modules --exclude=.next --exclude=__pycache__ --exclude=./data --exclude=.env --exclude=deploy/azure/config.env -cf - . | ssh datn@<ip> 'tar -xf - -C ~/datn'
     bash deploy/azure/vm.sh ssh   # rồi: cd ~/datn && docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml --profile ai up -d --build <service>
 
+## Chạy bản H&M (06/10/2026)
+Catalog H&M nằm cạnh catalog Amazon, chọn bằng biến trong `~/datn/.env` trên VM (xoá/đổi các dòng này để quay lại Amazon):
+
+    BACKEND_DB=mini_market_hm                      # Postgres: database riêng, Amazon ở mini_market
+    QDRANT_PRODUCT_COLLECTION=hm_product_embeddings
+    HM_IMAGE_DIR=/hm_images                        # ảnh ở ~/datn/data/hm/images/<3 số>/<article_id>.jpg
+    DATN_ENGINE=hm                                 # recommender: tower + luật phục vụ + LightGBM (amazon = checkpoint cũ)
+    DATN_RECOMMENDER_URL=http://recommender:8100
+
+Dựng dữ liệu (một lần; cần `data/hm/serving/` từ `scripts/hm/export_serving_bundle.py` và ảnh đã giải nén). Các lệnh chạy trong image nhỏ `datn-tools` (`docker build -f deploy/azure/Dockerfile.tools -t datn-tools .`), mount `src` và `data`:
+
+    T="docker run --rm --network datn_default -v $PWD/src:/app/src:ro -v $PWD/data:/data"
+    $T datn-tools python -m datn.catalog.cli --serving /data/hm/serving build-hm --images /data/hm/images
+    # backend phải chạy một lần trên DB mới để tạo bảng; tạo admin/demo: docker cp apps/backend/scripts/create_users.py datn-backend:/tmp/ && docker exec -e PYTHONPATH=/app datn-backend python /tmp/create_users.py
+    $T -e DATN_PG_DSN=postgresql://mini_market:<mk>@postgres:5432/mini_market_hm -e QDRANT_URL=http://qdrant:6333 datn-tools python -m datn.catalog.cli --serving /data/hm/serving import-hm
+    $T -e DATN_PRODUCTS_COLLECTION=hm_products -e DATN_REVIEWS_COLLECTION=hm_reviews -e DATN_VECTOR_SIZE=512 datn-tools python -m datn.retrieval.cli --qdrant-url http://qdrant:6333 --pg-dsn postgresql://mini_market:<mk>@postgres:5432/mini_market_hm index-hm --serving /data/hm/serving --recreate
+
+Khi chưa dùng Amazon, các container `datn-web`, `datn-rag` và recommender Amazon có thể để dừng (`docker stop`) để tiết kiệm RAM; chúng có `restart: unless-stopped` nên không tự bật lại khi VM khởi động lại.
+IP của bạn đổi thì SSH bị chặn: cập nhật rule `ssh-from-my-ip` của NSG `vm-datnNSG` sang IP mới (`az network nsg rule update ... --source-address-prefixes <ip>/32`).
+
 ## Lưu ý khi chạy script trên Windows (Git Bash)
 `az` là bản Windows nên nhận đường dẫn kiểu `/c/...` là sai: dùng `C:/Users/...` cho `SSH_PUBLIC_KEY_FILE`, `01-setup.sh` đã tự đổi `--custom-data` bằng `cygpath -m`.
 Nếu cloud-init không chạy (Docker chưa có), cài tay: `curl -fsSL https://get.docker.com | sudo sh; sudo usermod -aG docker datn`.
