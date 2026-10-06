@@ -1,5 +1,7 @@
 # Báo cáo Phân tích So sánh Bộ dữ liệu Cũ & Mới
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 Báo cáo này so sánh chi tiết giữa **Bộ dữ liệu Cũ** (phiên bản đã commit trên Git HEAD) và **Bộ dữ liệu Mới** (phiên bản vừa được tạo ra sau khi bạn thay đổi các tham số lọc hoặc modulus).
 
 ## 1. So sánh Tổng quan (General Comparison)

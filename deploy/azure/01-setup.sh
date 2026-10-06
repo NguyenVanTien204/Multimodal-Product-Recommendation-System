@@ -48,7 +48,7 @@ az vm create -g "$AZ_RG" -n "$VM_NAME" --image Ubuntu2204 --size "$chosen" \
   --os-disk-size-gb "$OS_DISK_GB" --storage-sku StandardSSD_LRS \
   --admin-username "$ADMIN_USER" --ssh-key-values "$SSH_PUBLIC_KEY_FILE" \
   --public-ip-sku Standard --nsg-rule NONE \
-  --custom-data "$here/cloud-init.yaml" --tags project=datn -o table
+  --custom-data "$(cygpath -m "$here/cloud-init.yaml" 2>/dev/null || echo "$here/cloud-init.yaml")" --tags project=datn -o table
 
 # SSH only from this machine's current IP; nothing else is exposed (use `vm.sh tunnel` to reach the services).
 az network nsg rule create -g "$AZ_RG" --nsg-name "${VM_NAME}NSG" -n ssh-from-my-ip --priority 1000 \

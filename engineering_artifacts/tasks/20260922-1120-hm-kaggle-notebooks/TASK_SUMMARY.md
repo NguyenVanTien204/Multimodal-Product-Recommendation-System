@@ -15,3 +15,5 @@
 ## Important operating detail
 
 The local environment does not contain the H&M competition data, so no end-to-end training was executed here. The notebook discovers a Kaggle-mounted input; Jina CLIP v2 downloads from Hugging Face on its first run and therefore needs Kaggle Internet enabled.
+
+> Cập nhật 2026-10-05: `docs/HM_NOTEBOOK_GUIDE.md` đã được thay bằng `docs/hm/04_notebook_guide.md`; `scripts/build_hm_notebooks.py` đã bị vô hiệu hoá (notebook v2 được bảo trì thủ công); `configs/hm.yaml` chỉ còn là bảng tham chiếu. Xem `docs/hm/README.md`.

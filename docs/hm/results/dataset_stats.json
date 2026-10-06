@@ -1,0 +1,90 @@
+{
+  "catalog_items": 105542,
+  "splits": {
+    "train": {
+      "events": 1242735,
+      "users": 50000,
+      "items": 71357,
+      "first_day": "2018-09-20",
+      "last_day": "2020-09-01"
+    },
+    "rerank_train": {
+      "events": 10452,
+      "users": 3063,
+      "items": 4569,
+      "first_day": "2020-09-02",
+      "last_day": "2020-09-08"
+    },
+    "valid": {
+      "events": 10690,
+      "users": 3030,
+      "items": 4505,
+      "first_day": "2020-09-09",
+      "last_day": "2020-09-15"
+    },
+    "test": {
+      "events": 9800,
+      "users": 2799,
+      "items": 4200,
+      "first_day": "2020-09-16",
+      "last_day": "2020-09-22"
+    }
+  },
+  "cold": {
+    "rerank_train": {
+      "events_unseen_by_tower_train": 0.11576731725985458,
+      "events_never_sold_before_window": 0.11576731725985458
+    },
+    "valid": {
+      "events_unseen_by_tower_train": 0.23171188026192704,
+      "events_never_sold_before_window": 0.1235734331150608
+    },
+    "test": {
+      "events_unseen_by_tower_train": 0.29581632653061224,
+      "events_never_sold_before_window": 0.10316326530612245
+    }
+  },
+  "recency": {
+    "valid": {
+      "sold_prev_7d": 0.6487371375116932,
+      "sold_prev_14d": 0.7436856875584659,
+      "sold_prev_28d": 0.8072965388213283,
+      "sold_prev_56d": 0.8412535079513564,
+      "distinct_items_in_window": 4505,
+      "distinct_items_sold_prev_7d": 4569
+    },
+    "test": {
+      "sold_prev_7d": 0.6886734693877551,
+      "sold_prev_14d": 0.7759183673469388,
+      "sold_prev_28d": 0.8394897959183674,
+      "sold_prev_56d": 0.8718367346938776,
+      "distinct_items_in_window": 4200,
+      "distinct_items_sold_prev_7d": 4505
+    }
+  },
+  "users": {
+    "train_events_mean": 24.8547,
+    "train_events_median": 14.0,
+    "train_days_mean": 7.2111,
+    "test_targets_mean": 3.501250446588067,
+    "test_targets_median": 2.0,
+    "test_repeat_rate_vs_train": 0.023571428571428573,
+    "test_users_without_train_history": 0.0
+  },
+  "popularity_hit_share": {
+    "12": 0.007244897959183674,
+    "100": 0.04520408163265306,
+    "1000": 0.12551020408163266
+  },
+  "items_null_share": {
+    "item_id": 0.0,
+    "prod_name": 0.0,
+    "product_type_name": 0.0,
+    "product_group_name": 0.0,
+    "graphical_appearance_name": 0.0,
+    "colour_group_name": 0.0,
+    "department_name": 0.0,
+    "section_name": 0.0,
+    "detail_desc": 0.003941558810710428
+  }
+}

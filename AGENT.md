@@ -169,4 +169,18 @@ Khi nhận được yêu cầu phát triển hoặc gỡ lỗi (debugging) từ 
 4.  **Bảo vệ dữ liệu:** Nghiêm cấm mọi hành vi rò rỉ dữ liệu (data leakage) giữa tập train và test. Tuyệt đối không dùng split ngẫu nhiên nếu không được yêu cầu.
 
 ---
+## 5. PHỤ LỤC H&M (cập nhật 05/10/2026)
+
+H&M là bộ dữ liệu chính mới của đề tài (chi tiết: [`docs/hm/`](docs/hm/README.md)); các điều khoản dưới đây bổ sung — không thay thế — các trụ cột ở trên, vốn mô tả pipeline Amazon.
+
+1.  **Chia dữ liệu:** H&M dùng cửa sổ thời gian toàn cục 7 ngày liên tiếp (`train` → `selection` → `valid` → `test`), không dùng leave-last-out. Nhãn của một cửa sổ chỉ được dùng để chấm cửa sổ đó (và, sau khi chốt cấu hình, để refit cho cửa sổ kế tiếp). Mẫu khách chỉ được chọn bằng dữ liệu trước cửa sổ chọn checkpoint.
+2.  **Thống kê item theo thời điểm:** mọi thống kê cấp item (độ phổ biến, bán chạy 7 ngày, ngày xuất hiện đầu tiên, giá) chỉ được tính từ ngày `< cutoff` của cửa sổ đích; không bao giờ chèn nhãn vào tập ứng viên.
+3.  **Baseline bắt buộc:** mọi kết quả H&M phải kèm `popularity`, `recent_popularity` (bán chạy 7 ngày trước) và `random`; so sánh quan trọng dùng bootstrap ghép cặp theo khách và chỉ coi là cải thiện khi khoảng tin cậy 95% loại trừ 0.
+4.  **Cold-start:** phải báo riêng hai loại — *strict-cold theo tower* và *never-sold* (chưa có giao dịch nào trước cutoff); không dùng một con số "cold" duy nhất.
+5.  **Metric:** headline là full-ranking trên test (HitRate/Recall/NDCG/MAP@12, @50, @100); sampled 1+99 chỉ là bảng phụ, luôn đọc cạnh baseline, không so với full-ranking hay với bộ dữ liệu khác.
+6.  **Notebook là nguồn chính thức:** `notebooks/hm/00…03` được bảo trì thủ công; `scripts/build_hm_notebooks.py` đã bị vô hiệu hoá. Tham số khai báo bằng biến môi trường `HM_*`; `configs/hm.yaml` chỉ là bảng tham chiếu. Mọi thay đổi phương pháp phải cập nhật `docs/hm/02_methods.md`, thêm mục thực nghiệm vào `docs/hm/03_experiments_and_results.md` và ghi vào `engineering_logs/`.
+7.  **Mã suy luận:** logic H&M hiện nằm trong notebook; khi đưa vào hệ thống phải port sang `src/datn/` theo cấu trúc ở mục 3 (kèm kiểm thử đơn vị), không import notebook.
+8.  **Tài liệu nhất quán:** không để lại số "kỳ vọng" chưa đo trong tài liệu; mọi bảng số phải ghi nguồn (file JSON/mục thực nghiệm).
+
+---
 *Tài liệu này được phê duyệt bởi chủ dự án và là điều khoản bắt buộc cho mọi hoạt động đóng góp mã nguồn.*

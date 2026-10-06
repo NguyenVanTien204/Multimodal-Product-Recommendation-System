@@ -1,5 +1,7 @@
 # CHƯƠNG 1: TỔNG QUAN LÝ THUYẾT VỀ LĨNH VỰC NGHIÊN CỨU
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+
 ---
 
 ## 1.1. Tổng quan bài toán

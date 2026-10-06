@@ -231,3 +231,7 @@ __marimo__/
 
 # Azure deployment local settings
 deploy/azure/config.env
+
+# H&M: checkpoint lớn (tower ~490MB/bản) không đưa vào git; số liệu nhỏ nằm ở docs/hm/results/
+checkpoints/hm/*.pt
+checkpoints/hm/*.zip

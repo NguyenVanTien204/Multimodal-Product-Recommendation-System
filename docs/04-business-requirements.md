@@ -1,5 +1,7 @@
 # Đặc tả nghiệp vụ và yêu cầu hệ thống
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 ## 1. Mục đích
 
 Tài liệu mô tả nghiệp vụ của hệ thống gợi ý sản phẩm đa phương thức, ranh giới trách nhiệm giữa recommender, RAG và agent, các use case chính, quy tắc nghiệp vụ, yêu cầu chức năng/phi chức năng và tiêu chí nghiệm thu.

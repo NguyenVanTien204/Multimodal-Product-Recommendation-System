@@ -1,5 +1,7 @@
 # Thiết kế User Tower (Attention/Transformer trên chuỗi hành vi)
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 Tài liệu này mô tả kiến trúc và các quyết định thiết kế của module
 [`src/datn/recommenders/user_tower/`](../src/datn/recommenders/user_tower/), đồng thời
 **sửa một lỗi logic trong công thức Late Fusion ở [`02-overview.md`](./02-overview.md)

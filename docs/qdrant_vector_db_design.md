@@ -1,5 +1,7 @@
 # Thiết kế Cơ sở dữ liệu Vector (Qdrant)
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** phần hệ thống này (kho vector, RAG, web) hiện dựng trên dữ liệu **Amazon** vì chỉ Amazon có review văn bản; H&M không có review. Việc chuyển hay giữ nguyên là quyết định D2/D3 trong [`./hm/05_thesis_plan.md`](./hm/05_thesis_plan.md); bộ dữ liệu chính mới của đề tài là **H&M** ([`./hm/README.md`](./hm/README.md)).
+
 Tài liệu này ghi nhận thiết kế collection Qdrant phục vụ truy hồi đa phương thức (multimodal retrieval) cho Đồ án Tốt nghiệp: **"Xây dựng hệ thống gợi ý sản phẩm đa phương thức ứng dụng RAG"**, thay thế phương án FAISS song song (`products_image.faiss` / `products_text.faiss`) được phác thảo ban đầu tại [multimodal_embeddings_report.md](./multimodal_embeddings_report.md) mục 4.
 
 ## 1. Quyết định thiết kế

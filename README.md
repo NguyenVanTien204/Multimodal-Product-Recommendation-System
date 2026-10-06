@@ -1,5 +1,7 @@
 # Multimodal Product Recommendation — Phase 1
 
+> **Cập nhật 05/10/2026 — bộ dữ liệu chính mới là H&M.** Thực nghiệm khuyến nghị (User Tower + luật phục vụ nhận thức thời gian + LightGBM + kênh cold CLIP) được chuẩn hoá ở [`docs/hm/`](docs/hm/README.md); hướng dẫn chạy notebook: [`docs/hm/04_notebook_guide.md`](docs/hm/04_notebook_guide.md). Phần còn lại của README này mô tả pipeline **Amazon** (giữ nguyên làm đối chứng, đồng thời là nguồn của kho RAG và hệ thống web hiện tại). Mục lục toàn bộ tài liệu: [`docs/README.md`](docs/README.md).
+
 Pipeline notebook Coveo hai tầng mới: [hướng dẫn Retrieval → Reranker](docs/COVEO_NOTEBOOK_GUIDE.md).
 
 Giai đoạn 1 xây nền tảng dữ liệu cho Amazon Reviews 2023

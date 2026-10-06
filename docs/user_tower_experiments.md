@@ -1,5 +1,7 @@
 # Báo cáo Thực nghiệm & Nghiên cứu Thành phần (Ablation Study) - User Tower
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 Tài liệu này ghi nhận kết quả thực nghiệm hoàn chỉnh của các biến thể mô hình **User Tower (SASRec Two-Tower Retrieval)** trong đề tài: *"Xây dựng hệ thống gợi ý sản phẩm đa phương thức ứng dụng RAG"*.
 
 Toàn bộ các thực nghiệm được đánh giá theo giao thức **Full-Ranking trên toàn bộ danh mục 152.086 sản phẩm** (Leave-one-out), không sử dụng phương pháp lấy mẫu negative (negative sampling) khi đánh giá để đảm bảo tính khách quan và trung thực học thuật tuyệt đối.

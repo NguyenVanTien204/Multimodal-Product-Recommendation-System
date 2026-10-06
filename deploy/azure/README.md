@@ -28,6 +28,28 @@ Chi phí cố định khi VM tắt: khoảng **$8.45/tháng**.
 
 Khuyến nghị: dev hằng ngày ở máy local (miễn phí), chỉ bật VM khi cần tích hợp hoặc demo. VM tự tắt lúc 22:00 giờ VN.
 
+## Trạng thái đã triển khai (30/09/2026)
+- Region **koreacentral** (subscription chỉ cho phép koreacentral, eastasia, indiasouthcentral, malaysiawest, indonesiacentral).
+- VM `vm-datn` (Standard_B2as_v2, 20.41.100.79 nếu chưa đổi IP), user `datn`, repo tại `~/datn`, `.env` ở `~/datn/.env` (chmod 600).
+- Stack: postgres, qdrant, recommender, rag, backend, **web** (Next.js, container `datn-web`) — tất cả bind 127.0.0.1.
+- Dữ liệu đã chuyển: volume Postgres + Qdrant (`backend_postgres_data`, `backend_qdrant_data`), embedding, artifact, dataset.
+
+## Dùng hằng ngày (chạy từ thư mục DATN trong Git Bash)
+    bash deploy/azure/vm.sh start     # bật VM (~1 phút), container tự chạy lại (restart: unless-stopped)
+    bash deploy/azure/vm.sh tunnel    # giữ cửa sổ này mở; sau đó mở http://localhost:3000 (web), :8000/docs (backend)
+    bash deploy/azure/vm.sh ps        # trạng thái container + RAM
+    bash deploy/azure/vm.sh logs rag  # log theo dõi trực tiếp (backend|rag|recommender|web|qdrant|postgres; bỏ trống = tất cả)
+    bash deploy/azure/vm.sh stop      # TẮT (deallocate) - dừng tính tiền compute
+Lưu ý Windows: dùng `127.0.0.1` thay `localhost` nếu trình duyệt/curl bị treo. Auto-shutdown hằng ngày mặc định 15:00 UTC (22:00 VN).
+
+## Cập nhật code lên VM
+    tar --exclude=.git --exclude=.venv --exclude=node_modules --exclude=.next --exclude=__pycache__ --exclude=./data --exclude=.env --exclude=deploy/azure/config.env -cf - . | ssh datn@<ip> 'tar -xf - -C ~/datn'
+    bash deploy/azure/vm.sh ssh   # rồi: cd ~/datn && docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml --profile ai up -d --build <service>
+
+## Lưu ý khi chạy script trên Windows (Git Bash)
+`az` là bản Windows nên nhận đường dẫn kiểu `/c/...` là sai: dùng `C:/Users/...` cho `SSH_PUBLIC_KEY_FILE`, `01-setup.sh` đã tự đổi `--custom-data` bằng `cygpath -m`.
+Nếu cloud-init không chạy (Docker chưa có), cài tay: `curl -fsSL https://get.docker.com | sudo sh; sudo usermod -aG docker datn`.
+
 ## Các bước
 1. Cài CLI và đăng nhập: `winget install Microsoft.AzureCLI`, rồi `az login`.
 2. `cp deploy/azure/config.env.example deploy/azure/config.env`, chỉnh `AZ_LOCATION` cho đúng region được phép
@@ -47,8 +69,7 @@ Trên VM, trong thư mục repo, tạo `.env` có `POSTGRES_PASSWORD` và `JWT_S
 
 Overlay bind mọi cổng vào 127.0.0.1 nên public IP chỉ lộ SSH (NSG cũng chỉ mở 22 cho IP hiện tại của bạn).
 
-## Việc còn lại (chưa làm)
-- Chuyển dữ liệu lên VM: `data/embedding` (1.8 GB), `data/artifacts/user_tower_balanced_v1` và `reranker_v2`,
+## Ghi chú dữ liệu
+- (Đã làm) Chuyển dữ liệu lên VM: `data/embedding` (1.8 GB), `data/artifacts/user_tower_balanced_v1` và `reranker_v2`,
   `data/processed/balanced_u5_i2_v1`, cache Jina (khoảng 1.7 GB, có thể để VM tự tải), và snapshot Qdrant.
   Tổng khoảng 6-8 GB, nên đĩa 64 GB là đủ.
-- Frontend `apps/web` chưa nằm trong compose. Nếu cần chạy trên VM sẽ tốn thêm khoảng 300 MB RAM.

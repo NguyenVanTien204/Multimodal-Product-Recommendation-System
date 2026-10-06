@@ -1,5 +1,7 @@
 # Tổng quan đề tài và hệ thống
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 ## 1. Thông tin chung
 
 | Thuộc tính | Nội dung |

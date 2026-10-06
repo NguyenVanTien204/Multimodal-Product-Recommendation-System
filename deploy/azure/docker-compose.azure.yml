@@ -22,6 +22,22 @@ services:
     ports: !override
       - "127.0.0.1:8200:8200"
 
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: datn-web
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      # Server-side proxy route (app/api/[...path]) talks to the backend over the compose network.
+      DATN_API_BASE_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+
   backend:
     ports: !override
       - "127.0.0.1:8000:8000"

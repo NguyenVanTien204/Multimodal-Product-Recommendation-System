@@ -1,5 +1,7 @@
 # Báo cáo Trích xuất Đặc trưng Đa phương thức (Multimodal Embeddings Report)
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 Tài liệu này ghi nhận chi tiết kiến trúc, quy trình xử lý kỹ thuật, kết quả kiểm định chất lượng và thực nghiệm truy vấn tương đồng của các vector đặc trưng đa phương thức (**Image Embeddings** & **Text Embeddings**) phục vụ cho Pha 2 (Trích xuất đặc trưng) và Pha 3 (FAISS Indexing & Hybrid Retrieval) của Đồ án Tốt nghiệp: **"Xây dựng hệ thống gợi ý sản phẩm đa phương thức ứng dụng RAG"**.
 
 ---

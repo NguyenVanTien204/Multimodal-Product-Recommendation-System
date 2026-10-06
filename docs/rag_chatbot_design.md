@@ -1,5 +1,7 @@
 # Chatbot RAG gợi ý & tìm kiếm sản phẩm đa phương thức
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** phần hệ thống này (kho vector, RAG, web) hiện dựng trên dữ liệu **Amazon** vì chỉ Amazon có review văn bản; H&M không có review. Việc chuyển hay giữ nguyên là quyết định D2/D3 trong [`./hm/05_thesis_plan.md`](./hm/05_thesis_plan.md); bộ dữ liệu chính mới của đề tài là **H&M** ([`./hm/README.md`](./hm/README.md)).
+
 Tài liệu mô tả hệ thống chatbot đã xây dựng (Pha 3–5 trong ROADMAP): kiến trúc, quyết định thiết kế, cách chạy, và các giới hạn đã biết.
 
 ## 1. Kiến trúc tổng quan

@@ -1,5 +1,7 @@
 # Tầm nhìn sản phẩm
 
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+
 ## 1. Tuyên bố tầm nhìn
 
 Xây dựng một hệ thống gợi ý sản phẩm cá nhân hóa có khả năng kết hợp lịch sử tương tác của người dùng, nội dung văn bản và hình ảnh sản phẩm để đưa ra danh sách Top-K phù hợp; đồng thời cho phép người dùng tìm kiếm, tinh chỉnh, so sánh và nhận giải thích bằng ngôn ngữ tự nhiên dựa trên dữ liệu sản phẩm và đánh giá thực tế.

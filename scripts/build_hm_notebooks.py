@@ -1,8 +1,18 @@
-"""Generate the standalone, Kaggle-portable H&M notebook sequence."""
+"""DEPRECATED (2026-10-05) — bộ sinh notebook H&M phiên bản v1.
+
+Các notebook notebooks/hm/00..03 đã được viết lại thủ công (v2: ID-dropout, luật phục vụ, refit, sampled 1+99, reranker LightGBM,
+kênh cold CLIP) và là nguồn chính thức. Chạy script này sẽ GHI ĐÈ chúng bằng bản v1 cũ, vì vậy nó bị chặn trừ khi truyền --force.
+Xem docs/hm/04_notebook_guide.md, mục 8.
+"""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
-import nbformat as nbf
+
+if "--force" not in sys.argv:
+    raise SystemExit("build_hm_notebooks.py đã lỗi thời và sẽ ghi đè notebook v2 bằng bản v1. Đọc docstring; truyền --force nếu thật sự muốn.")
+
+import nbformat as nbf  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
