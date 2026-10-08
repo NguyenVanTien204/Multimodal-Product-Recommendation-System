@@ -77,7 +77,7 @@ graph TD
     DuckDB -.-> |Read Metadata| ParquetData
 ```
 
-> **Cập nhật kiến trúc 30/09/2026:** FAISS được thay bằng Qdrant; lớp RAG/Agent đã cài đặt ở `src/datn/{retrieval,rag,agent}` và `apps/rag`. Sơ đồ trên phản ánh luồng hiện tại.
+> **Cập nhật kiến trúc 30/09/2026:** FAISS được thay bằng Qdrant; lớp RAG/Agent đã cài đặt ở `hm/src/datn/{retrieval,rag,agent}` và `hm/apps/rag`. Sơ đồ trên phản ánh luồng hiện tại.
 
 ---
 
@@ -97,7 +97,7 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
 *   **Tiêu chuẩn:** Hệ thống phải hỗ trợ tìm kiếm ngữ nghĩa thời gian thực trên không gian biểu diễn đa phương thức (Multimodal Representation) kết hợp bộ lọc thuộc tính cứng.
 *   **Quy định kỹ thuật:**
     *   Embeddings của văn bản (`text_embeddings.npy`) và hình ảnh (`image_embeddings.npy`) phải được chuẩn hóa (normalize) trước khi lưu. Khi có raw media, ưu tiên pretrained CLIP-family encoder; với Coveo, dùng vector 50 chiều chính thức do dataset cung cấp, lưu provenance và mask thiếu dữ liệu thay vì tái mã hóa không thể kiểm chứng.
-    *   Index tìm kiếm tương đồng phải dùng vector DB hiệu năng cao. **Đã chọn Qdrant** (thay FAISS, xem `docs/qdrant_vector_db_design.md`): collection `products` và `reviews`, có payload filter và index HNSW.
+    *   Index tìm kiếm tương đồng phải dùng vector DB hiệu năng cao. **Đã chọn Qdrant** (thay FAISS, xem `hm/docs/qdrant_vector_db_design.md`): collection `products` và `reviews`, có payload filter và index HNSW.
     *   Quy trình tìm kiếm bắt buộc phải hỗ trợ **Hybrid Retrieval**: Lọc trước hoặc lọc sau các điều kiện cứng như khoảng giá (price), danh mục (category), thương hiệu (brand) bằng DuckDB/SQL trước khi trả về danh sách ứng viên Top-K.
 
 ### Trụ cột 3: Core Recommendation & RAG Engine
@@ -146,17 +146,17 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
     *   Mô hình gợi ý (FAISS, RecBole) và API truy xuất phải hoạt động bình thường ngay cả khi không có kết nối tới LLM (hoặc LLM bị quá tải/gặp lỗi). Trong trường hợp đó, hệ thống sẽ trả về danh sách sản phẩm thuần túy và không kèm lời giải thích tự nhiên.
 2.  **Cấu trúc thư mục quy chuẩn:**
     *   Mã nguồn dự án bắt buộc phải tuân theo sơ đồ mô-đun hóa:
-        *   [`src/datn/data/`](file:///d:/WorkSpace/Work/DATN/src/datn/data/): ETL và data pipeline.
-        *   `src/datn/features/`: Trích xuất đặc trưng đa phương thức (embeddings).
-        *   `src/datn/recommenders/`: Các mô hình baseline và late fusion.
-        *   `src/datn/retrieval/`: Qdrant collections (`products`, `reviews`) và truy xuất hybrid.
-        *   `src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
-        *   `src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
-        *   `apps/backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
-        *   `src/datn/evaluation/`: Code tính toán metrics và chạy ablation test.
+        *   [`legacy/src/datn_legacy/data/`](file:///d:/WorkSpace/Work/DATN/src/datn/data/): ETL và data pipeline.
+        *   `legacy/src/datn_legacy/features/`: Trích xuất đặc trưng đa phương thức (embeddings).
+        *   `hm/src/datn/recommenders/`: Các mô hình baseline và late fusion.
+        *   `hm/src/datn/retrieval/`: Qdrant collections (`products`, `reviews`) và truy xuất hybrid.
+        *   `hm/src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
+        *   `hm/src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
+        *   `hm/apps/backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
+        *   `hm/src/datn/evaluation/`: Code tính toán metrics và chạy ablation test.
 3.  **Quy trình Commit & Thử nghiệm:**
     *   Không được sửa đổi dữ liệu đã đóng băng trong `data/processed/` mà không cập nhật `dataset_manifest.json` và tạo một phiên bản dataset mới.
-    *   Mọi thực nghiệm so sánh mô hình phải sử dụng cấu hình chung (hyperparameters, seed) lưu tại `configs/` và xuất kết quả ra tệp tin CSV/JSON kèm theo hình vẽ biểu đồ để đảm bảo khả năng tái lập.
+    *   Mọi thực nghiệm so sánh mô hình phải sử dụng cấu hình chung (hyperparameters, seed) lưu tại `hm/configs/` (bộ H&M) hoặc `legacy/configs/` (Amazon/Coveo) và xuất kết quả ra tệp tin CSV/JSON kèm theo hình vẽ biểu đồ để đảm bảo khả năng tái lập.
 
 ---
 
@@ -171,15 +171,15 @@ Khi nhận được yêu cầu phát triển hoặc gỡ lỗi (debugging) từ 
 ---
 ## 5. PHỤ LỤC H&M (cập nhật 05/10/2026)
 
-H&M là bộ dữ liệu chính mới của đề tài (chi tiết: [`docs/hm/`](docs/hm/README.md)); các điều khoản dưới đây bổ sung — không thay thế — các trụ cột ở trên, vốn mô tả pipeline Amazon.
+H&M là bộ dữ liệu chính mới của đề tài (chi tiết: [`hm/docs/`](hm/docs/README.md)); các điều khoản dưới đây bổ sung — không thay thế — các trụ cột ở trên, vốn mô tả pipeline Amazon.
 
 1.  **Chia dữ liệu:** H&M dùng cửa sổ thời gian toàn cục 7 ngày liên tiếp (`train` → `selection` → `valid` → `test`), không dùng leave-last-out. Nhãn của một cửa sổ chỉ được dùng để chấm cửa sổ đó (và, sau khi chốt cấu hình, để refit cho cửa sổ kế tiếp). Mẫu khách chỉ được chọn bằng dữ liệu trước cửa sổ chọn checkpoint.
 2.  **Thống kê item theo thời điểm:** mọi thống kê cấp item (độ phổ biến, bán chạy 7 ngày, ngày xuất hiện đầu tiên, giá) chỉ được tính từ ngày `< cutoff` của cửa sổ đích; không bao giờ chèn nhãn vào tập ứng viên.
 3.  **Baseline bắt buộc:** mọi kết quả H&M phải kèm `popularity`, `recent_popularity` (bán chạy 7 ngày trước) và `random`; so sánh quan trọng dùng bootstrap ghép cặp theo khách và chỉ coi là cải thiện khi khoảng tin cậy 95% loại trừ 0.
 4.  **Cold-start:** phải báo riêng hai loại — *strict-cold theo tower* và *never-sold* (chưa có giao dịch nào trước cutoff); không dùng một con số "cold" duy nhất.
 5.  **Metric:** headline là full-ranking trên test (HitRate/Recall/NDCG/MAP@12, @50, @100); sampled 1+99 chỉ là bảng phụ, luôn đọc cạnh baseline, không so với full-ranking hay với bộ dữ liệu khác.
-6.  **Notebook là nguồn chính thức:** `notebooks/hm/00…03` được bảo trì thủ công; `scripts/build_hm_notebooks.py` đã bị vô hiệu hoá. Tham số khai báo bằng biến môi trường `HM_*`; `configs/hm.yaml` chỉ là bảng tham chiếu. Mọi thay đổi phương pháp phải cập nhật `docs/hm/02_methods.md`, thêm mục thực nghiệm vào `docs/hm/03_experiments_and_results.md` và ghi vào `engineering_logs/`.
-7.  **Mã suy luận:** logic H&M hiện nằm trong notebook; khi đưa vào hệ thống phải port sang `src/datn/` theo cấu trúc ở mục 3 (kèm kiểm thử đơn vị), không import notebook.
+6.  **Notebook là nguồn chính thức:** `hm/notebooks/00…03` được bảo trì thủ công; `hm/scripts/build_hm_notebooks.py` đã bị vô hiệu hoá. Tham số khai báo bằng biến môi trường `HM_*`; `hm/configs/hm.yaml` chỉ là bảng tham chiếu. Mọi thay đổi phương pháp phải cập nhật `hm/docs/02_methods.md`, thêm mục thực nghiệm vào `hm/docs/03_experiments_and_results.md` và ghi vào `engineering_logs/`.
+7.  **Mã suy luận:** logic H&M hiện nằm trong notebook; khi đưa vào hệ thống phải port sang `hm/src/datn/` theo cấu trúc ở mục 3 (kèm kiểm thử đơn vị), không import notebook.
 8.  **Tài liệu nhất quán:** không để lại số "kỳ vọng" chưa đo trong tài liệu; mọi bảng số phải ghi nguồn (file JSON/mục thực nghiệm).
 
 ---

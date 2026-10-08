@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-06
+
+- Restructured the repository by dataset: all H&M-system code moved under `hm/` (`apps/`, `src/datn/`, `notebooks/`, `scripts/`, `configs/`, `tests/`, `docs/`, `reports/`, `checkpoints/`, `deploy/azure/`); Amazon/Coveo code moved under `legacy/` (package renamed `datn_legacy`: `data`, `features`, `experiments`, `recommenders/{user_tower,reranker,coveo}`). Old-to-new path table: `hm/README.md`. Moves done with `git mv` (history preserved).
+- `pyproject.toml` now builds two packages (`hm/src/datn`, `legacy/src/datn_legacy`), pytest runs `hm/tests` + `legacy/tests`; Dockerfiles copy `hm/src` (+ `legacy/src` for the recommender's Amazon engine); `docker-compose.yml`, Azure overlay, `.gitignore`, `.dockerignore` updated. `data/`, `.env`, `docker-compose.yml` stay at the repo root so the Azure VM layout is unchanged except for build paths.
+- Entries below this one keep their original (pre-move) paths on purpose; use the table in `hm/README.md`.
+
 ## 2026-10-05
 
 - Rewrote `notebooks/hm/02_hm_retrieval.ipynb` and `03_hm_reranking_evaluation.ipynb` (v2) and extended `00_hm_data_preparation.ipynb`: ID-dropout and optional inference cold-fix, refit on train+selection+valid, time-aware serving rule, 7-source candidates, 24 features, LightGBM LambdaRank, CLIP cold channel with slot interleaving, sampled 1+99 evaluation, paired bootstrap, model export cell, global item-count table (`item_daily_counts.parquet`).

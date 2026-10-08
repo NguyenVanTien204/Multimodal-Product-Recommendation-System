@@ -1,6 +1,6 @@
 # CHƯƠNG 3: THỰC NGHIỆM VÀ ĐÁNH GIÁ HỆ THỐNG
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../../hm/docs/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
 
 ---
 
@@ -166,7 +166,7 @@ Hệ thống Chatbot RAG được kiểm thử chức năng qua 6 kịch bản t
 
 ### 3.4.2. Đánh giá chất lượng phản hồi và tính có căn cứ (Grounding)
 - **Kết quả bộ kiểm thử tự động (Automated Test Suite)**:
-  Bộ kiểm thử `tests/test_rag_units.py` gồm **47/47 unit test đều vượt qua (100% Passed)**, kiểm chứng toàn diện các thành phần:
+  Bộ kiểm thử `hm/tests/test_rag_units.py` gồm **47/47 unit test đều vượt qua (100% Passed)**, kiểm chứng toàn diện các thành phần:
   - Bộ tách thực thể giá tiền tiếng Việt/tiếng Anh (chuẩn hóa các dạng: `500k`, `1.2tr`, `$50`, `từ A đến B`).
   - Bộ lọc thương hiệu và danh mục trong Qdrant.
   - Thuật toán xếp hạng Weighted RRF.

@@ -1,0 +1,46 @@
+# Overlay for the Azure VM:  docker compose -f docker-compose.yml -f hm/deploy/azure/docker-compose.azure.yml --profile ai up -d
+# - every port is bound to 127.0.0.1 (reach services through `hm/deploy/azure/vm.sh tunnel`), so a public IP exposes only SSH;
+# - the convenience defaults for the database password and JWT secret are replaced by required variables.
+# `!override` needs Docker Compose >= 2.24 (cloud-init installs the current one).
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+
+  qdrant:
+    ports: !override
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+
+  recommender:
+    ports: !override
+      - "127.0.0.1:8100:8100"
+
+  rag:
+    ports: !override
+      - "127.0.0.1:8200:8200"
+
+  web:
+    build:
+      context: ./hm/apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: datn-web
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      # Server-side proxy route (app/api/[...path]) talks to the backend over the compose network.
+      DATN_API_BASE_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    ports: !override
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_market}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${BACKEND_DB:-${POSTGRES_DB:-mini_market}}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}

@@ -1,6 +1,6 @@
 # CHƯƠNG 2: QUY TRÌNH XÂY DỰNG HỆ THỐNG GỢI Ý SẢN PHẨM ĐA PHƯƠNG THỨC VÀ CHATBOT RAG
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../../hm/docs/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
 
 ---
 
@@ -45,7 +45,7 @@ Trợ lý đàm thoại mua sắm được thiết kế nhằm nâng cao trải 
   2. *Siêu dữ liệu sản phẩm (Product Metadata)*: Chứa thông tin mô tả chi tiết của từng `parent_asin` gồm tên gọi, danh mục phân cấp đa tầng, thương hiệu, khoảng giá bán, danh sách thuộc tính chi tiết (`features`) và danh sách liên kết hình ảnh phân giải cao.
 
 ### 2.2.2. Bộ dữ liệu thực nghiệm chốt của đề tài
-Để phục vụ quá trình huấn luyện và đánh giá nghiêm ngặt, đề tài đã xây dựng và đóng băng phiên bản dữ liệu thực nghiệm chính thức: **`balanced_u5_i2_v1`** (cấu hình tại `configs/balanced_dataset.yaml`).
+Để phục vụ quá trình huấn luyện và đánh giá nghiêm ngặt, đề tài đã xây dựng và đóng băng phiên bản dữ liệu thực nghiệm chính thức: **`balanced_u5_i2_v1`** (cấu hình tại `legacy/configs/balanced_dataset.yaml`).
 
 | Đặc trưng thống kê | Giá trị định lượng | Ghi chú kỹ thuật |
 | :--- | :---: | :--- |
@@ -184,7 +184,7 @@ Nhờ quy trình này, toàn bộ 21.690 người dùng đều có ít nhất 5 
 
 ### 2.5.1. Xây dựng User Tower và Item Representation
 - **Quyết định thiết kế đệm phải (Right-Padding) thay vì Left-Padding**:
-  Trong `src/datn/recommenders/user_tower/dataset.py`, hàm `pad_right` được lựa chọn có chủ đích:
+  Trong `legacy/src/datn_legacy/recommenders/user_tower/dataset.py`, hàm `pad_right` được lựa chọn có chủ đích:
   ```python
   def pad_right(seq: list[int], max_len: int) -> np.ndarray:
       trimmed = seq[-max_len:]
@@ -222,7 +222,7 @@ Nhờ quy trình này, toàn bộ 21.690 người dùng đều có ít nhất 5 
   $$\mathcal{L} = -\sum_{u} \log \frac{\exp(h_u \cdot e_{pos} - \log Q(pos))}{\exp(h_u \cdot e_{pos} - \log Q(pos)) + \sum_{j \in \mathcal{N}_u} \exp(h_u \cdot e_j - \log Q(j))}$$
 
 ### 2.5.2. Sinh ứng viên từ nhiều nguồn (Multi-Source Candidate Generation)
-Được định nghĩa tại `src/datn/recommenders/reranker/candidates.py`, lớp `CandidateBudget` phân bổ hạn mức trước khi khử trùng lặp:
+Được định nghĩa tại `legacy/src/datn_legacy/recommenders/reranker/candidates.py`, lớp `CandidateBudget` phân bổ hạn mức trước khi khử trùng lặp:
 
 | Nguồn ứng viên | Hạn mức (`CandidateBudget`) | Cơ chế trích xuất |
 | :--- | :---: | :--- |
@@ -235,7 +235,7 @@ Nhờ quy trình này, toàn bộ 21.690 người dùng đều có ít nhất 5 
 Sau khi tổng hợp, hệ thống loại bỏ các sản phẩm trùng lặp và loại trừ các sản phẩm nằm trong tập tương tác quá khứ (`seen`).
 
 ### 2.5.3. Xây dựng Residual Listwise Reranker
-Được hiện thực tại `src/datn/recommenders/reranker/model.py`, lớp `ResidualListwiseRanker` xây dựng 15 đặc trưng đại diện cho từng ứng viên:
+Được hiện thực tại `legacy/src/datn_legacy/recommenders/reranker/model.py`, lớp `ResidualListwiseRanker` xây dựng 15 đặc trưng đại diện cho từng ứng viên:
 
 - **15 đặc trưng đầu vào (`FEATURE_NAMES`)**:
   1. `tower_score`: Điểm User Tower đã chuẩn hóa Z-score.
@@ -276,7 +276,7 @@ Sau khi tổng hợp, hệ thống loại bỏ các sản phẩm trùng lặp v�
 ## 2.6. Xây dựng Chatbot RAG hỗ trợ gợi ý và tìm kiếm sản phẩm
 
 ### 2.6.1. Xây dựng kho tri thức và cơ chế truy xuất
-- **Cơ sở dữ liệu vector Qdrant (`src/datn/vectordb/`)**:
+- **Cơ sở dữ liệu vector Qdrant (`hm/src/datn/vectordb/`)**:
   - Collection **`products`** ($152.086$ points):
     - Named vectors: `image` (1024-d, Cosine) và `text` (1024-d, Cosine).
     - Point ID = số nguyên không dấu = `items.parquet` dòng index + 1 = `products.id` trong PostgreSQL.
@@ -285,14 +285,14 @@ Sau khi tổng hợp, hệ thống loại bỏ các sản phẩm trùng lặp v�
   - Collection **`reviews`**:
     - Vector 1024-d từ Jina CLIP v2 biểu diễn `title + text`.
     - Payload: `product_id`, `item_id`, `rating`, `helpful_vote`, `verified_purchase`, `title`, `text`. Mỗi sản phẩm được chọn lọc tối đa **4 đánh giá hữu ích nhất**.
-- **Thuật toán tìm kiếm lai Weighted RRF (`src/datn/retrieval/search.py`)**:
+- **Thuật toán tìm kiếm lai Weighted RRF (`hm/src/datn/retrieval/search.py`)**:
   Hợp nhất thứ hạng tìm kiếm trên vector văn bản và vector hình ảnh:
   
   $$\text{RRF\_Score}(d) = w_{text} \cdot \frac{1}{60 + r_{text}(d)} + w_{img} \cdot \frac{1}{60 + r_{img}(d)}$$
 
 ### 2.6.2. Xử lý hội thoại và tạo phản hồi có căn cứ
-Được điều phối tại `src/datn/agent/orchestrator.py`:
-1. **Bộ phân loại ý định tiếng Việt / tiếng Anh (`src/datn/agent/intent.py`)**:
+Được điều phối tại `hm/src/datn/agent/orchestrator.py`:
+1. **Bộ phân loại ý định tiếng Việt / tiếng Anh (`hm/src/datn/agent/intent.py`)**:
    - Sử dụng hàm chuẩn hóa `fold` loại bỏ dấu tiếng Việt để bóc tách từ khóa nhưng giữ nguyên chuỗi gốc cho bộ mã hóa đa ngôn ngữ.
    - Từ điển thuật ngữ `GLOSSARY` ánh xạ các danh từ thời trang tiếng Việt sang tiếng Anh của Amazon (ví dụ: `ao khoac` $\to$ `jacket`, `giay the thao` $\to$ `sneakers`, `dam` $\to$ `dress`).
    - Bóc tách thực thể giá tiền `parse_price`: hỗ trợ `duoi 500k`, `tu 300k den 700k`, `under $50`, cùng các chế độ tương đối (`cheaper`, `pricier`).
@@ -301,7 +301,7 @@ Sau khi tổng hợp, hệ thống loại bỏ các sản phẩm trùng lặp v�
    Hệ thống duy trì 60 sản phẩm ứng viên trong bộ nhớ phiên. Khi người dùng yêu cầu `refine` (ví dụ: "đổi màu đỏ", "giá rẻ hơn"), hệ thống tái lọc trực tiếp trên 60 ứng viên này trong 15ms mà không cần gọi lại mô hình nhúng vector.
 3. **Cá nhân hóa kết hợp Recommender (`PERSONAL_WEIGHT = 0.6`)**:
    Nếu người dùng có lịch sử giỏ hàng hoặc xem hàng trong phiên, hệ thống gọi Recommender Service (:8100) để lấy thứ hạng mô hình và cộng điểm theo trọng số $0.6 \times \text{rank}_{model} + 0.4 \times \text{rank}_{semantic}$.
-4. **Kiểm duyệt căn cứ và chống ảo giác (`src/datn/rag/context.py`)**:
+4. **Kiểm duyệt căn cứ và chống ảo giác (`hm/src/datn/rag/context.py`)**:
    - Bắt buộc đánh mã trích dẫn `[P#]` cho sản phẩm và `[R#.#]` cho review.
    - Hàm `check_grounding`: Quét toàn bộ số tiền xuất hiện trong câu trả lời; nếu có bất kỳ số tiền nào không khớp với giá trong cơ sở dữ liệu, câu trả lời lập tức bị hủy bỏ và chuyển sang chế độ mẫu chuẩn (*Template Fallback*).
 
@@ -360,7 +360,7 @@ Hệ thống được đóng gói hoàn chỉnh bằng Docker Compose với các
 ```
 
 ### 2.7.5. Thiết kế dữ liệu nghiệp vụ (PostgreSQL) và Vector (Qdrant)
-- **Lược đồ CSDL quan hệ PostgreSQL (`apps/backend/app/*/models.py`)**:
+- **Lược đồ CSDL quan hệ PostgreSQL (`hm/apps/backend/app/*/models.py`)**:
   - `users`: `id` (PK), `email` (Unique), `password_hash`, `full_name`, `is_admin` (Bool), `created_at`.
   - `categories`: `id` (PK), `name` (Unique), `slug` (Unique, Index).
   - `products`: `id` (PK), `sku` (ASIN, Unique, Index), `name`, `description`, `price` (Numeric(12,2)), `stock_quantity`, `image_url`, `category_id` (FK $\to$ `categories.id`), `is_active` (Bool), `created_at`.
@@ -375,7 +375,7 @@ Hệ thống được đóng gói hoàn chỉnh bằng Docker Compose với các
 
 ### 2.7.6. Thiết kế API của các dịch vụ
 
-#### A. Backend Gateway (`apps/backend/app/`, Cổng :8000)
+#### A. Backend Gateway (`hm/apps/backend/app/`, Cổng :8000)
 | Nhóm API | Endpoint | Phương thức | Quyền truy cập | Chức năng nghiệp vụ |
 | :--- | :--- | :---: | :---: | :--- |
 | **Auth** | `/auth/register` | POST | Public | Đăng ký tài khoản người dùng mới |
@@ -396,11 +396,11 @@ Hệ thống được đóng gói hoàn chỉnh bằng Docker Compose với các
 | **Chat** | `/chat` | POST | Optional User| Cổng chat chính: tích hợp giỏ hàng người dùng $\to$ gọi RAG service |
 | | `/chat/health` | GET | Public | Kiểm tra kết nối tới RAG service |
 
-#### B. Recommender Service (`apps/recommender/`, Cổng :8100)
+#### B. Recommender Service (`hm/apps/recommender/`, Cổng :8100)
 - `GET /health`: Trả về `model_loaded`, `model_version`, `catalog_size`.
 - `POST /recommend`: Nhận `history` (danh sách SKU) và `k`, chạy qua `RerankerPipeline` trả về danh sách gợi ý và điểm số.
 
-#### C. RAG Service (`apps/rag/`, Cổng :8200)
+#### C. RAG Service (`hm/apps/rag/`, Cổng :8200)
 - `GET /health`: Trả về trạng thái encoder, LLM, collections Qdrant và số sessions đang hoạt động.
 - `POST /chat`: Tiếp nhận tin nhắn/ảnh, điều phối đầy đủ pipeline RAG.
 - `POST /search`: Tìm kiếm ngữ nghĩa có kèm bộ lọc cứng.

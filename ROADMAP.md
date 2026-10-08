@@ -2,9 +2,9 @@
 
 Tài liệu này phác thảo lộ trình phát triển chi tiết cho dự án **"Xây dựng hệ thống gợi ý sản phẩm đa phương thức ứng dụng RAG"**. Lộ trình bao gồm các công việc từ xây dựng nền tảng dữ liệu, trích xuất đặc trưng (embeddings), huấn luyện mô hình gợi ý, cho đến đóng gói dịch vụ API và phát triển hệ thống giao diện bọc ngoài (Wrapper System).
 
-> **Cập nhật 30/09/2026:** Pha 2–4 đã xong, Pha 5 đã cài đặt (còn kiểm thử end-to-end), Pha 6 đang làm. Chi tiết kiến trúc, số liệu và giới hạn: [`docs/rag_chatbot_design.md`](docs/rag_chatbot_design.md). Các mục checklist bên dưới giữ nguyên nội dung kế hoạch ban đầu; trạng thái thực tế nằm ở dòng *Trạng thái* của từng pha.
+> **Cập nhật 30/09/2026:** Pha 2–4 đã xong, Pha 5 đã cài đặt (còn kiểm thử end-to-end), Pha 6 đang làm. Chi tiết kiến trúc, số liệu và giới hạn: [`hm/docs/rag_chatbot_design.md`](hm/docs/rag_chatbot_design.md). Các mục checklist bên dưới giữ nguyên nội dung kế hoạch ban đầu; trạng thái thực tế nằm ở dòng *Trạng thái* của từng pha.
 
-> **Cập nhật 05/10/2026 — chuyển bộ dữ liệu chính sang H&M.** Các Pha 1–6 bên dưới mô tả quá trình trên bộ **Amazon** (giữ nguyên làm đối chứng). Việc còn lại để hoàn tất luận văn trên H&M được theo dõi ở *Pha H&M* ở cuối tài liệu và chi tiết ở [`docs/hm/05_thesis_plan.md`](docs/hm/05_thesis_plan.md).
+> **Cập nhật 05/10/2026 — chuyển bộ dữ liệu chính sang H&M.** Các Pha 1–6 bên dưới mô tả quá trình trên bộ **Amazon** (giữ nguyên làm đối chứng). Việc còn lại để hoàn tất luận văn trên H&M được theo dõi ở *Pha H&M* ở cuối tài liệu và chi tiết ở [`hm/docs/05_thesis_plan.md`](hm/docs/05_thesis_plan.md).
 
 ---
 
@@ -70,7 +70,7 @@ Trích xuất các đặc trưng ngữ nghĩa từ hình ảnh, văn bản sản
 ---
 
 ### ⚪ Pha 3: Xây dựng cơ chế Tìm kiếm lai & Indexing (FAISS Index & Hybrid Retrieval)
-*Trạng thái: Đã hoàn thành (DONE) — dùng **Qdrant** thay FAISS (xem `docs/qdrant_vector_db_design.md`): collection `products` (152.086 điểm, vector ảnh + text, lọc giá/thương hiệu/rating) và tìm kiếm lai bằng weighted RRF*
+*Trạng thái: Đã hoàn thành (DONE) — dùng **Qdrant** thay FAISS (xem `hm/docs/qdrant_vector_db_design.md`): collection `products` (152.086 điểm, vector ảnh + text, lọc giá/thương hiệu/rating) và tìm kiếm lai bằng weighted RRF*
 
 Xây dựng cơ sở dữ liệu vector và bộ máy tìm kiếm sản phẩm tương tự phục vụ quá trình sinh ứng viên gợi ý nhanh (Candidate Generation).
 
@@ -81,7 +81,7 @@ Xây dựng cơ sở dữ liệu vector và bộ máy tìm kiếm sản phẩm t
     *   [ ] Tích hợp cơ chế **Hybrid Retrieval**: Cho phép người dùng kết hợp tìm kiếm ngữ nghĩa kèm lọc các thuộc tính cứng (Metadata Filtering) như khoảng giá, danh mục bằng DuckDB trên dữ liệu Parquet.
 *   **Kết quả kỳ vọng:**
     *   Index file: `products.faiss` được tối ưu hóa cho tìm kiếm cosine similarity.
-    *   Module truy xuất: `src/datn/retrieval/` hỗ trợ tìm kiếm kết hợp (hybrid search).
+    *   Module truy xuất: `hm/src/datn/retrieval/` hỗ trợ tìm kiếm kết hợp (hybrid search).
 
 ---
 
@@ -97,12 +97,12 @@ Xây dựng cấu phần cốt lõi của RAG: Truy xuất thông tin bổ trợ
     *   [ ] Xây dựng module phân tích ý định (`Intent Parser`): Chuyển câu lệnh chat tiếng Việt tự nhiên của người dùng thành các bộ lọc tương ứng (ví dụ: *"Rẻ hơn"* $\rightarrow$ giảm `max_price`, *"Màu đỏ"* $\rightarrow$ cập nhật bộ lọc màu sắc) để xếp hạng lại sản phẩm (Reranking).
 *   **Kết quả kỳ vọng:**
     *   Index file: `reviews.faiss` hỗ trợ trích xuất nhanh review liên quan.
-    *   Module RAG & Agent: `src/datn/rag/` và `src/datn/agent/`.
+    *   Module RAG & Agent: `hm/src/datn/rag/` và `hm/src/datn/agent/`.
 
 ---
 
 ### ⚪ Pha 5: Đóng gói API FastAPI & Xây dựng Giao diện Next.js (Wrapper System)
-*Trạng thái: Đã cài đặt, còn kiểm thử end-to-end (IN PROGRESS) — service `apps/rag` (`/chat /search /recommend /refine /explain /compare`), gateway `POST /chat` ở backend, giao diện chat Next.js; chưa chạy Docker `rag` + web trên trình duyệt*
+*Trạng thái: Đã cài đặt, còn kiểm thử end-to-end (IN PROGRESS) — service `hm/apps/rag` (`/chat /search /recommend /refine /explain /compare`), gateway `POST /chat` ở backend, giao diện chat Next.js; chưa chạy Docker `rag` + web trên trình duyệt*
 
 Đóng gói các mô hình toán học và logic RAG thành một **Hệ thống phần mềm** chạy thực tế, cho phép người dùng cuối tương tác.
 
@@ -145,21 +145,21 @@ Chạy thực nghiệm tổng thể để viết báo cáo khoa học phục v�
 
 *   **Safety Lock:** Không thay đổi hay làm bẩn tập dữ liệu Parquet đã đóng băng ở Pha 1. Mọi thay đổi dữ liệu phải tạo phiên bản mới trong `dataset_manifest.json`.
 *   **Quy trình Độc lập:** Hệ thống API và Gợi ý của Pha 5 phải có cơ chế fallback. Nếu dịch vụ LLM bên ngoài bị ngắt kết nối, API `/recommend` vẫn phải trả về sản phẩm bình thường kèm theo lời cảnh báo lỗi RAG trên UI.
-*   **Definition of Done (DoD) cho mỗi giai đoạn:** Mỗi giai đoạn hoàn thành phải đi kèm với mã nguồn nằm trong thư mục `src/` và có kịch bản chạy mẫu (Smoke Test hoặc Notebook chạy thử) để kiểm chứng, không chỉ báo cáo lý thuyết.
+*   **Definition of Done (DoD) cho mỗi giai đoạn:** Mỗi giai đoạn hoàn thành phải đi kèm với mã nguồn nằm trong `hm/src/` (hoặc `legacy/src/` cho bộ Amazon/Coveo) và có kịch bản chạy mẫu (Smoke Test hoặc Notebook chạy thử) để kiểm chứng, không chỉ báo cáo lý thuyết.
 
 ---
 
 ### 🟣 Pha H&M: Chuyển bộ dữ liệu chính sang H&M (benchmark chính mới)
-*Trạng thái: Thực nghiệm khuyến nghị đã hoàn thành ở mức baseline đầy đủ (05/10/2026); còn ablation modality, nhiều seed, port suy luận vào `src/`, quyết định về RAG/web và viết lại luận văn (IN PROGRESS)*
+*Trạng thái: Thực nghiệm khuyến nghị đã hoàn thành ở mức baseline đầy đủ (05/10/2026); còn ablation modality, nhiều seed, port suy luận vào `hm/src/`, quyết định về RAG/web và viết lại luận văn (IN PROGRESS)*
 
 *   **Đã hoàn thành:**
-    *   [x] Pipeline 4 notebook H&M (`notebooks/hm/00…03`): mẫu 50.000 khách, cửa sổ 7 ngày liên tiếp, embedding Jina CLIP v2 512 chiều, thống kê item không rò rỉ (kể cả bảng đếm toàn cục `item_daily_counts.parquet`).
+    *   [x] Pipeline 4 notebook H&M (`hm/notebooks/00…03`): mẫu 50.000 khách, cửa sổ 7 ngày liên tiếp, embedding Jina CLIP v2 512 chiều, thống kê item không rò rỉ (kể cả bảng đếm toàn cục `item_daily_counts.parquet`).
     *   [x] Xử lý cold-start mức mô hình (ID-dropout), luật phục vụ nhận thức thời gian, refit, ứng viên 7 nguồn, LightGBM LambdaRank 24 đặc trưng, kênh cold CLIP + chèn vị trí.
     *   [x] Giao thức đánh giá full-ranking + sampled 1+99 + bootstrap ghép cặp; kết quả test: HitRate@12 = 0,128, HitRate@100 = 0,365 (baseline mạnh nhất "bán chạy tuần trước": 0,076 / 0,253).
-    *   [x] Bộ tài liệu chuẩn hoá `docs/hm/` và bản ghi kết quả gốc `docs/hm/results/`.
+    *   [x] Bộ tài liệu chuẩn hoá `hm/docs/` và bản ghi kết quả gốc `hm/docs/results/`.
 *   **Còn lại (ưu tiên):**
     *   [ ] **Ablation modality** `HM_MODALITY = id/text/image/multimodal` (câu hỏi nghiên cứu cốt lõi, chưa chạy) và cold-start theo modality.
     *   [ ] Nhiều seed; CI ghép cặp cho reranker so với tower + luật phục vụ.
-    *   [ ] Port suy luận H&M vào `src/datn/` (thống kê item theo cutoff, luật phục vụ, `featurize`, LightGBM, kênh cold) kèm kiểm thử đơn vị.
-    *   [ ] Quyết định D1–D6 (vai trò Amazon/H&M, RAG không có review trên H&M, dữ liệu web demo) — xem `docs/hm/05_thesis_plan.md`, mục 6.
+    *   [ ] Port suy luận H&M vào `hm/src/datn/` (thống kê item theo cutoff, luật phục vụ, `featurize`, LightGBM, kênh cold) kèm kiểm thử đơn vị.
+    *   [ ] Quyết định D1–D6 (vai trò Amazon/H&M, RAG không có review trên H&M, dữ liệu web demo) — xem `hm/docs/05_thesis_plan.md`, mục 6.
     *   [ ] Viết lại `docs/LuanVan/` theo H&M.

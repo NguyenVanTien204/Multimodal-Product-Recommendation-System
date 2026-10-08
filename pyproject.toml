@@ -33,18 +33,18 @@ rag = [
 coveo = ["torch>=2.2,<3", "numpy>=1.26,<3", "jupyter>=1.0,<2", "matplotlib>=3.8,<4"]
 
 [project.scripts]
-datn-data = "datn.data.cli:main"
-datn-balanced-data = "datn.data.balanced_cli:main"
+datn-data = "datn_legacy.data.cli:main"
+datn-balanced-data = "datn_legacy.data.balanced_cli:main"
 datn-vectordb = "datn.vectordb.cli:main"
 datn-retrieval = "datn.retrieval.cli:main"
 datn-eval-retrieval = "datn.evaluation.retrieval_eval:main"
-datn-user-tower = "datn.recommenders.user_tower.cli:main"
-datn-checkpoint = "datn.experiments.checkpoint:main"
+datn-user-tower = "datn_legacy.recommenders.user_tower.cli:main"
+datn-checkpoint = "datn_legacy.experiments.checkpoint:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/datn"]
+packages = ["hm/src/datn", "legacy/src/datn_legacy"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["hm/tests", "legacy/tests"]
 asyncio_mode = "auto"
-pythonpath = ["src", "."]
+pythonpath = ["hm/src", "legacy/src", "hm"]

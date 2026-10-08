@@ -1,6 +1,6 @@
 # KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../../hm/docs/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
 
 ---
 
@@ -24,7 +24,7 @@
      - Triển khai kho tri thức Qdrant với hai collection `products` (152.086 points) và `reviews` (77.824 points hữu ích nhất).
      - Bộ phân loại ý định hỗ trợ chuẩn xác 9 tác vụ hội thoại và trích xuất thực thể giá, màu, thương hiệu.
      - Cơ chế kiểm duyệt căn cứ (*Grounding Guardrails*) đảm bảo **100% câu trả lời có mã trích dẫn hợp lệ** (`[P#]`, `[R#.#]`), **tỷ lệ ảo giác giá tiền đạt 0,0%**.
-     - Vượt qua **47/47 kịch bản kiểm thử tự động** trong bộ test suite `tests/test_rag_units.py`.
+     - Vượt qua **47/47 kịch bản kiểm thử tự động** trong bộ test suite `hm/tests/test_rag_units.py`.
      - Độ trễ mã hóa và tìm kiếm vector trên GPU chỉ mất **~150 ms**, tổng thời gian phản hồi đạt **~1.5 giây**.
    - *Đánh giá*: **Hoàn thành xuất sắc**.
 
@@ -82,9 +82,9 @@ Tuân thủ quy định về liêm chính học thuật, bảng dưới đây k�
 
 | STT | Nội dung có dùng AI hỗ trợ | Công cụ AI sử dụng | Mức độ hỗ trợ | Trách nhiệm và kiểm chứng của sinh viên | Minh chứng trong đồ án |
 | :---: | :--- | :---: | :--- | :--- | :---: |
-| **1** | **Tham khảo cú pháp và cấu trúc mã nguồn** | ChatGPT-4o, Antigravity IDE | Sinh các đoạn mã khung (Boilerplate) cho Pydantic schemas, FastAPI routers và cấu hình Docker Compose. | Sinh viên tự viết toàn bộ logic xử lý chính, thuật toán K-core, kiến trúc Two-Tower, Reranker và bộ quy tắc Intent. | Toàn bộ mã nguồn trong thư mục `src/datn/` và `apps/` |
-| **2** | **Xử lý xung đột thư viện trên Kaggle** | ChatGPT-4o | Gợi ý đoạn mã monkey-patch sửa lỗi buffer RoPE của thư viện `transformers 5.3.0` và lỗi xung đột kernel `torchvision`. | Sinh viên phân tích cơ chế bộ đệm trong PyTorch, kiểm chứng vector trích xuất không bị `NaN`/`Inf`, đảm bảo độ dài $L_2 = 1.0$. | Tài liệu [multimodal_embeddings_report.md](../multimodal_embeddings_report.md) mục 2.2 |
-| **3** | **Tạo khung giao diện Web cơ bản** | Antigravity IDE | Hỗ trợ tạo cấu trúc các component React và class định kiểu Tailwind CSS cho khung chat và thẻ sản phẩm. | Sinh viên tái cấu trúc giao diện, kết nối API state management, hydrate dữ liệu từ backend và xử lý luồng sự kiện giỏ hàng. | Thư mục `apps/web/` |
+| **1** | **Tham khảo cú pháp và cấu trúc mã nguồn** | ChatGPT-4o, Antigravity IDE | Sinh các đoạn mã khung (Boilerplate) cho Pydantic schemas, FastAPI routers và cấu hình Docker Compose. | Sinh viên tự viết toàn bộ logic xử lý chính, thuật toán K-core, kiến trúc Two-Tower, Reranker và bộ quy tắc Intent. | Toàn bộ mã nguồn trong thư mục `hm/src/datn/` và `apps/` |
+| **2** | **Xử lý xung đột thư viện trên Kaggle** | ChatGPT-4o | Gợi ý đoạn mã monkey-patch sửa lỗi buffer RoPE của thư viện `transformers 5.3.0` và lỗi xung đột kernel `torchvision`. | Sinh viên phân tích cơ chế bộ đệm trong PyTorch, kiểm chứng vector trích xuất không bị `NaN`/`Inf`, đảm bảo độ dài $L_2 = 1.0$. | Tài liệu [multimodal_embeddings_report.md](../../legacy/docs/multimodal_embeddings_report.md) mục 2.2 |
+| **3** | **Tạo khung giao diện Web cơ bản** | Antigravity IDE | Hỗ trợ tạo cấu trúc các component React và class định kiểu Tailwind CSS cho khung chat và thẻ sản phẩm. | Sinh viên tái cấu trúc giao diện, kết nối API state management, hydrate dữ liệu từ backend và xử lý luồng sự kiện giỏ hàng. | Thư mục `hm/apps/web/` |
 | **4** | **Rà soát ngôn ngữ và chuẩn hóa báo cáo** | Gemini / Antigravity | Gợi ý cách diễn đạt tiếng Việt học thuật, kiểm tra lỗi chính tả và định dạng bảng biểu Markdown. | Sinh viên tự tổng hợp số liệu thực tế từ manifest, tự chịu trách nhiệm về toàn bộ nội dung học thuật và lập luận khoa học. | Các tài liệu trong thư mục `docs/LuanVan/` |
 
 > [!IMPORTANT]
@@ -105,7 +105,7 @@ Tuân thủ quy định về liêm chính học thuật, bảng dưới đây k�
    - Có phương pháp nghiên cứu rõ ràng, thực hiện đầy đủ các nghiên cứu loại trừ thành phần (Ablation Study) để bảo vệ các quyết định thiết kế kiến trúc.
 
 3. **Về sản phẩm phần mềm bàn giao**:
-   - Không dừng lại ở các đoạn mã thử nghiệm trên Jupyter Notebook, đề tài đã đóng gói mã nguồn thành một thư viện Python chuẩn (`src/datn`), cung cấp giao diện dòng lệnh CLI chuyên nghiệp (`datn-balanced-data`, `datn-user-tower`, `datn-retrieval`).
+   - Không dừng lại ở các đoạn mã thử nghiệm trên Jupyter Notebook, đề tài đã đóng gói mã nguồn thành một thư viện Python chuẩn (`hm/src/datn`), cung cấp giao diện dòng lệnh CLI chuyên nghiệp (`datn-balanced-data`, `datn-user-tower`, `datn-retrieval`).
    - Xây dựng hoàn chỉnh hệ thống ứng dụng web thương mại điện tử đa dịch vụ có khả năng triển khai thực tế bằng Docker Compose.
 
 ---

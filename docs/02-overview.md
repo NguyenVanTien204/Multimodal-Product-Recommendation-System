@@ -1,6 +1,6 @@
 # Tổng quan đề tài và hệ thống
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](./hm/README.md).
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** tài liệu này mô tả bộ **Amazon Reviews 2023** (đối chứng, được giữ nguyên). Bộ dữ liệu chính mới của đề tài là **H&M** — xem [`./hm/README.md`](../hm/docs/README.md).
 
 ## 1. Thông tin chung
 
@@ -168,7 +168,7 @@ Agent là lớp điều phối. Khi agent không khả dụng, recommender, retr
 ### Late fusion
 
 `E_cf` là vector **user** (đầu ra User Tower, xem
-[`user_tower_design.md`](./user_tower_design.md)); `E_image`/`E_text` là vector
+[`user_tower_design.md`](../legacy/docs/user_tower_design.md)); `E_image`/`E_text` là vector
 **item** (CLIP). Hai không gian này không được cộng trực tiếp — chỉ so khớp
 user-item qua tích vô hướng. Fusion diễn ra ở **mức điểm số**, sau dot product,
 không ở mức vector:
@@ -201,7 +201,7 @@ trước khi lập FAISS index. Embedding phải được cache và version theo
 
 ### 8.2. Kết quả Thực nghiệm Ablation Study (Full-Ranking trên 152.086 items)
 
-Chi tiết báo cáo và quy trình thực nghiệm xem tại [`docs/user_tower_experiments.md`](./user_tower_experiments.md).
+Chi tiết báo cáo và quy trình thực nghiệm xem tại [`legacy/docs/user_tower_experiments.md`](../legacy/docs/user_tower_experiments.md).
 
 | Biến thể (Variant) | Phương thức | Test HitRate@10 | Test NDCG@10 | Test HitRate@50 | Test NDCG@50 | Ghi chú & Đánh giá |
 |---|---|:---:|:---:|:---:|:---:|---|

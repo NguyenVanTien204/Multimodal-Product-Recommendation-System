@@ -26,7 +26,7 @@ downloads/
 eggs/
 .eggs/
 lib/
-!apps/web/lib/
+!hm/apps/web/lib/
 lib64/
 parts/
 sdist/
@@ -230,8 +230,8 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Azure deployment local settings
-deploy/azure/config.env
+hm/deploy/azure/config.env
 
-# H&M: checkpoint lớn (tower ~490MB/bản) không đưa vào git; số liệu nhỏ nằm ở docs/hm/results/
-checkpoints/hm/*.pt
-checkpoints/hm/*.zip
+# H&M: checkpoint lớn (tower ~490MB/bản) không đưa vào git; số liệu nhỏ nằm ở hm/docs/results/
+hm/checkpoints/*.pt
+hm/checkpoints/*.zip

@@ -1,8 +1,0 @@
-# One-off data jobs (catalog import, Qdrant indexing) without the 5 GB RAG image: only polars/numpy/qdrant/psycopg.
-# The `datn` source is mounted at run time, so editing code never needs a rebuild:
-#   docker build -f deploy/azure/Dockerfile.tools -t datn-tools .
-#   docker run --rm --network datn_default -v ~/datn/src:/app/src:ro -v ~/datn/data:/data datn-tools python -m datn.catalog.cli ...
-FROM python:3.11-slim
-WORKDIR /app
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app/src
-RUN pip install --no-cache-dir "polars>=1.20,<2" "numpy>=1.26,<3" "qdrant-client>=1.12,<1.13" "psycopg[binary]>=3.1,<4"

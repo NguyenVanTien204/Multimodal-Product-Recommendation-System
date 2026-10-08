@@ -1,8 +1,20 @@
 # Multimodal Product Recommendation — Phase 1
 
-> **Cập nhật 05/10/2026 — bộ dữ liệu chính mới là H&M.** Thực nghiệm khuyến nghị (User Tower + luật phục vụ nhận thức thời gian + LightGBM + kênh cold CLIP) được chuẩn hoá ở [`docs/hm/`](docs/hm/README.md); hướng dẫn chạy notebook: [`docs/hm/04_notebook_guide.md`](docs/hm/04_notebook_guide.md). Phần còn lại của README này mô tả pipeline **Amazon** (giữ nguyên làm đối chứng, đồng thời là nguồn của kho RAG và hệ thống web hiện tại). Mục lục toàn bộ tài liệu: [`docs/README.md`](docs/README.md).
+> **Cập nhật 05/10/2026 — bộ dữ liệu chính mới là H&M.** Thực nghiệm khuyến nghị (User Tower + luật phục vụ nhận thức thời gian + LightGBM + kênh cold CLIP) được chuẩn hoá ở [`hm/docs/`](hm/docs/README.md); hướng dẫn chạy notebook: [`hm/docs/04_notebook_guide.md`](hm/docs/04_notebook_guide.md). Phần còn lại của README này mô tả pipeline **Amazon** (giữ nguyên làm đối chứng, đồng thời là nguồn của kho RAG và hệ thống web hiện tại). Mục lục toàn bộ tài liệu: [`docs/README.md`](docs/README.md).
 
-Pipeline notebook Coveo hai tầng mới: [hướng dẫn Retrieval → Reranker](docs/COVEO_NOTEBOOK_GUIDE.md).
+## Cấu trúc thư mục (từ 06/10/2026)
+
+| Thư mục | Nội dung |
+|---|---|
+| [`hm/`](hm/README.md) | **Toàn bộ code hệ thống dùng bộ H&M**: `apps/` (backend, recommender, rag, web), `src/datn/` (thư viện), `notebooks/`, `scripts/`, `configs/`, `tests/`, `docs/`, `reports/`, `checkpoints/`, `deploy/azure/` |
+| [`legacy/`](legacy/README.md) | Code bộ Amazon + Coveo (đối chứng): package `datn_legacy`, notebook, script `eval_*`, test, báo cáo |
+| `docs/` | Tài liệu cấp dự án (tầm nhìn, tổng quan, luận văn `LuanVan/`, mục lục nhật ký) |
+| `data/` | Dữ liệu chạy, ngoài git (`data/hm/` = H&M) |
+| `docker-compose.yml`, `pyproject.toml`, `.env*` | Cấu hình chung của cả stack; `pyproject.toml` cài hai package `datn` và `datn_legacy` |
+
+Chạy mọi lệnh từ gốc repo, ví dụ `python -m pytest` (cả hai nhánh) hoặc `python hm/scripts/parity_check.py`. Bảng đổi đường dẫn cũ → mới: [`hm/README.md`](hm/README.md#bảng-đổi-đường-dẫn-trước--sau-06102026).
+
+Pipeline notebook Coveo hai tầng mới: [hướng dẫn Retrieval → Reranker](legacy/docs/COVEO_NOTEBOOK_GUIDE.md).
 
 Giai đoạn 1 xây nền tảng dữ liệu cho Amazon Reviews 2023
 `Clothing_Shoes_and_Jewelry`. Pipeline đọc JSONL/JSONL.GZ theo lô, ghi các part
@@ -14,8 +26,8 @@ out-of-core bằng DuckDB.
 ```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"
-# Đặt hai file nguồn vào data/raw theo configs/phase1.yaml
-.venv\Scripts\datn-data --config configs/phase1.yaml
+# Đặt hai file nguồn vào data/raw theo legacy/configs/phase1.yaml
+.venv\Scripts\datn-data --config legacy/configs/phase1.yaml
 ```
 
 Nguồn chính thức (các file rất lớn, không được pipeline tự tải ngầm):
@@ -47,7 +59,7 @@ chọn hai positive event cuối làm validation/test và giữ rating `<= 2` th
 negative riêng:
 
 ```powershell
-.venv\Scripts\datn-balanced-data --config configs/balanced_dataset.yaml
+.venv\Scripts\datn-balanced-data --config legacy/configs/balanced_dataset.yaml
 ```
 
 Output mặc định là `data/processed/balanced_u5_i2_v1/`, kèm
@@ -57,7 +69,7 @@ version đã tồn tại sẽ không bị ghi đè; hãy đổi `paths.output_di
 Huấn luyện User Tower bằng sampled-softmax mixed negatives có log-Q correction:
 
 ```powershell
-.venv\Scripts\datn-user-tower --config configs/user_tower.balanced.yaml train
+.venv\Scripts\datn-user-tower --config legacy/configs/user_tower.balanced.yaml train
 ```
 
 Notebook cũng tự nhận dataset local mới. Trên Kaggle có thể chỉ định các mount bằng
@@ -66,10 +78,10 @@ hai biến môi trường `DATN_DATA_DIR` và `DATN_EMB_DIR`.
 Đánh giá và lưu full-ranking test metrics, sau đó chạy residual listwise reranker:
 
 ```powershell
-.venv\Scripts\datn-user-tower --config configs/user_tower.balanced.yaml evaluate `
+.venv\Scripts\datn-user-tower --config legacy/configs/user_tower.balanced.yaml evaluate `
   --split test --mode full `
   --output data/artifacts/user_tower_balanced_v1/test_metrics.json
-# Chạy notebooks/reranker_training.ipynb
+# Chạy legacy/notebooks/reranker_training.ipynb
 ```
 
 Đóng gói model, scaler, configs, notebook snapshots, source snapshot, metrics,
@@ -81,19 +93,19 @@ training history, môi trường và SHA256 thành checkpoint bất biến:
 
 ## Chatbot RAG gợi ý và tìm kiếm sản phẩm đa phương thức
 
-Kiến trúc, quyết định thiết kế, số liệu đo và giới hạn: [docs/rag_chatbot_design.md](docs/rag_chatbot_design.md).
+Kiến trúc, quyết định thiết kế, số liệu đo và giới hạn: [hm/docs/rag_chatbot_design.md](hm/docs/rag_chatbot_design.md).
 
 ```powershell
 docker compose up -d postgres qdrant
 pip install -e ".[rag,dev]"
 datn-retrieval index-products            # collection `products` (vector đã có sẵn)
 datn-retrieval import-reviews --embeddings data/embedding/review_embeddings.npy --meta data/embedding/reviews_meta.parquet
-# review_embeddings.npy được tạo bằng notebooks/kaggle_rag_reviews_and_eval.ipynb (GPU Kaggle)
+# review_embeddings.npy được tạo bằng hm/notebooks/kaggle_rag_reviews_and_eval.ipynb (GPU Kaggle)
 
 copy .env.example .env                   # điền RAG_LLM_API_KEY (Gemini); để trống = chạy không LLM
-python scripts/check_llm.py              # tự kiểm LLM: kết nối, câu trả lời có căn cứ, chống prompt-injection
+python hm/scripts/check_llm.py              # tự kiểm LLM: kết nối, câu trả lời có căn cứ, chống prompt-injection
 docker compose --profile ai up -d --build  # Bỏ comment DATN_RECOMMENDER_URL và DATN_RAG_URL trong .env trước khi chạy
-python scripts/benchmark_rag.py --label gpu --reps 10   # đo độ trễ dịch vụ đang chạy
+python hm/scripts/benchmark_rag.py --label gpu --reps 10   # đo độ trễ dịch vụ đang chạy
 pytest                                   # 78 test (không cần GPU, Qdrant hay LLM)
 ```
 

@@ -18,3 +18,10 @@
 - True cold items (never sold before cutoff) are served through a separate CLIP channel and fixed-position slot interleaving (every 10 or 5 positions), reported with its cost in overall accuracy. Reason: the ranker cannot learn to promote items with all-zero interaction features.
 - Evaluation: full-ranking on test is the headline; sampled 1+99 (uniform and popularity negatives) is secondary and always shown next to random/popularity/recent-popularity; improvements are claimed only when the paired bootstrap 95% CI excludes zero.
 - `scripts/build_hm_notebooks.py` is deprecated because the v2 notebooks are maintained by hand and the generator would overwrite them.
+
+## 2026-10-06 — Split the repository by dataset (`hm/` vs `legacy/`)
+
+- Project owner decision: gather the whole H&M system into one top-level directory with clear sub-divisions (option 2: split `src/datn` and `apps/*` too, not just notebooks/scripts/docs).
+- Python package stays `datn` for H&M and shared code (no import churn in the services); Amazon/Coveo-only modules become package `datn_legacy`. `datn.retrieval.indexer/reviews` and `datn.evaluation` stay with H&M because `hm_indexer` and the RAG tooling import them.
+- The recommender service keeps its `DATN_ENGINE=amazon` fallback by importing `datn_legacy`; the H&M engine never imports it.
+- Large/ignored artifacts (`data/`, `*.pt`, `node_modules`, `.env`, `deploy/azure/config.env`) were not committed: `.gitignore` rules were re-pointed to the new paths. Historical logs keep old paths. The Azure VM was not touched: after the next `git pull` there, rebuild images (Dockerfile COPY paths changed) and move any VM-local files that lived under the old `checkpoints/`, `deploy/` paths.

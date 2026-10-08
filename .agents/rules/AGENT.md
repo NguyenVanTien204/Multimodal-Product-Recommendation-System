@@ -144,17 +144,17 @@ Mọi đóng góp mã nguồn (PR/Code Edit) phải phục vụ và tuân thủ 
     *   Mô hình gợi ý (FAISS, RecBole) và API truy xuất phải hoạt động bình thường ngay cả khi không có kết nối tới LLM (hoặc LLM bị quá tải/gặp lỗi). Trong trường hợp đó, hệ thống sẽ trả về danh sách sản phẩm thuần túy và không kèm lời giải thích tự nhiên.
 2.  **Cấu trúc thư mục quy chuẩn:**
     *   Mã nguồn dự án bắt buộc phải tuân theo sơ đồ mô-đun hóa:
-        *   [`src/datn/data/`](file:///d:/WorkSpace/Work/DATN/src/datn/data/): ETL và data pipeline.
-        *   `src/datn/features/`: Trích xuất đặc trưng đa phương thức (embeddings).
-        *   `src/datn/recommenders/`: Các mô hình baseline và late fusion.
-        *   `src/datn/retrieval/`: FAISS index và truy xuất hybrid.
-        *   `src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
-        *   `src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
-        *   `apps/backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
-        *   `src/datn/evaluation/`: Code tính toán metrics và chạy ablation test.
+        *   [`legacy/src/datn_legacy/data/`](file:///d:/WorkSpace/Work/DATN/src/datn/data/): ETL và data pipeline.
+        *   `legacy/src/datn_legacy/features/`: Trích xuất đặc trưng đa phương thức (embeddings).
+        *   `hm/src/datn/recommenders/`: Các mô hình baseline và late fusion.
+        *   `hm/src/datn/retrieval/`: FAISS index và truy xuất hybrid.
+        *   `hm/src/datn/rag/`: Đóng gói prompt, liên kết LLM và sinh văn bản giải thích.
+        *   `hm/src/datn/agent/`: Logic điều phối hội thoại (conversational agent) và quản lý session.
+        *   `hm/apps/backend/app/`: FastAPI marketplace độc lập (auth, catalog, cart, orders, Qdrant gateway); không import code train.
+        *   `hm/src/datn/evaluation/`: Code tính toán metrics và chạy ablation test.
 3.  **Quy trình Commit & Thử nghiệm:**
     *   Không được sửa đổi dữ liệu đã đóng băng trong `data/processed/` mà không cập nhật `dataset_manifest.json` và tạo một phiên bản dataset mới.
-    *   Mọi thực nghiệm so sánh mô hình phải sử dụng cấu hình chung (hyperparameters, seed) lưu tại `configs/` và xuất kết quả ra tệp tin CSV/JSON kèm theo hình vẽ biểu đồ để đảm bảo khả năng tái lập.
+    *   Mọi thực nghiệm so sánh mô hình phải sử dụng cấu hình chung (hyperparameters, seed) lưu tại `hm/configs/` (bộ H&M) hoặc `legacy/configs/` (Amazon/Coveo) và xuất kết quả ra tệp tin CSV/JSON kèm theo hình vẽ biểu đồ để đảm bảo khả năng tái lập.
 
 ---
 

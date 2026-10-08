@@ -1,4 +1,4 @@
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../../hm/docs/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
 
 **TRƯỜNG ĐH MỎ - ĐỊA CHẤT**
 
@@ -803,11 +803,11 @@ Trong hình và phần mô tả, cần gắn rõ trạng thái từng thành ph�
 
 ### Cấu trúc mã nguồn và quản lý dữ liệu
 
-\- Thư mục src/datn: pipeline dữ liệu, recommender, vector database và thực nghiệm.
+\- Thư mục hm/src/datn: pipeline dữ liệu, recommender, vector database và thực nghiệm.
 
-\- Thư mục apps/backend: API và các chức năng backend.
+\- Thư mục hm/apps/backend: API và các chức năng backend.
 
-\- Thư mục apps/web: giao diện web.
+\- Thư mục hm/apps/web: giao diện web.
 
 \- Thư mục data: dữ liệu, embedding, artifacts, checkpoint và manifest.
 
@@ -1013,7 +1013,7 @@ THỰC NGHIỆM VÀ ĐÁNH GIÁ HỆ THỐNG
 
 ### Đánh giá chất lượng phản hồi và tính có căn cứ
 
-\- Tỷ lệ yêu cầu được phân loại đúng ý định: 95% (47/47 kịch bản unit tests trong `tests/test_rag_units.py` đạt 100%).
+\- Tỷ lệ yêu cầu được phân loại đúng ý định: 95% (47/47 kịch bản unit tests trong `hm/tests/test_rag_units.py` đạt 100%).
 
 \- Tỷ lệ phản hồi có truy xuất được thông tin sản phẩm liên quan: 98% (thông qua Named Vectors trên Qdrant).
 

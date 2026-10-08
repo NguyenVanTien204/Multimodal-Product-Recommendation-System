@@ -1,6 +1,6 @@
 # HỆ THỐNG TÀI LIỆU ĐỒ ÁN TỐT NGHIỆP
 
-> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../hm/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
+> **Phạm vi bộ dữ liệu (cập nhật 05/10/2026):** bộ khung luận văn này viết theo bộ **Amazon**. Bộ dữ liệu chính mới là **H&M**; luận điểm được phép khẳng định, thực nghiệm còn thiếu và ánh xạ sửa từng chương nằm ở [`../hm/05_thesis_plan.md`](../../hm/docs/05_thesis_plan.md). Các số liệu Amazon bên dưới vẫn đúng cho Amazon.
 
 > **Tên đề tài**: Xây dựng hệ thống gợi ý sản phẩm đa phương thức ứng dụng RAG  
 > **Sinh viên thực hiện**: Nguyễn Văn Tiến – MSV: 2221050201 – Lớp: DCCTKH67A  
@@ -33,5 +33,5 @@ Các tài liệu trên được biên soạn dựa trên sự đối chiếu tr�
 - **Trích xuất đặc trưng đa phương thức**: [multimodal_embeddings_report.md](file:///d:/WorkSpace/Work/DATN/docs/multimodal_embeddings_report.md) và `data/embedding/`.
 - **Thiết kế & Thực nghiệm User Tower**: [user_tower_design.md](file:///d:/WorkSpace/Work/DATN/docs/user_tower_design.md), [user_tower_experiments.md](file:///d:/WorkSpace/Work/DATN/docs/user_tower_experiments.md) và [2026-09-22_balanced_retrieval_reranker_results.md](file:///d:/WorkSpace/Work/DATN/docs/logs/2026-09-22_balanced_retrieval_reranker_results.md).
 - **Cơ sở dữ liệu Vector Qdrant**: [qdrant_vector_db_design.md](file:///d:/WorkSpace/Work/DATN/docs/qdrant_vector_db_design.md).
-- **Thiết kế Chatbot RAG**: [rag_chatbot_design.md](file:///d:/WorkSpace/Work/DATN/docs/rag_chatbot_design.md) và bộ kiểm thử `tests/test_rag_units.py`.
-- **Thiết kế Kiến trúc Web & API**: Thư mục [docs/web/](file:///d:/WorkSpace/Work/DATN/docs/web/).
+- **Thiết kế Chatbot RAG**: [rag_chatbot_design.md](file:///d:/WorkSpace/Work/DATN/docs/rag_chatbot_design.md) và bộ kiểm thử `hm/tests/test_rag_units.py`.
+- **Thiết kế Kiến trúc Web & API**: Thư mục [hm/docs/web/](file:///d:/WorkSpace/Work/DATN/docs/web/).
