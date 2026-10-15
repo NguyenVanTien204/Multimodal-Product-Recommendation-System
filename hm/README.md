@@ -9,7 +9,7 @@
 |---|---|---|
 | [`apps/`](apps/) | **Dịch vụ chạy được** (4 container) | `backend/` marketplace FastAPI (auth, catalog, giỏ, đơn, preferences, cổng `/chat`) · `recommender/` dịch vụ gợi ý `:8100` · `rag/` chatbot RAG `:8200` · `web/` Next.js |
 | [`src/datn/`](src/datn/) | **Thư viện Python dùng chung** (package `datn`) | `recommenders/hm/` (User Tower + luật phục vụ + LightGBM, port từ notebook) · `catalog/` (dựng catalog cửa hàng, review minh hoạ) · `retrieval/` (Jina CLIP, Qdrant, tìm kiếm lai) · `rag/` (câu trả lời có căn cứ, LLM) · `agent/` (ý định, phiên, bộ nhớ sở thích) · `vectordb/` · `evaluation/` |
-| [`notebooks/`](notebooks/) | **Nghiên cứu** — pipeline huấn luyện/đánh giá trên Kaggle | `00` chuẩn bị dữ liệu → `01` embedding Jina → `02` retrieval (User Tower) → `03` reranking + đánh giá → `04` serving assets; `export_hm_images_zip` |
+| [`notebooks/`](notebooks/) | **Nghiên cứu** — pipeline huấn luyện/đánh giá trên Kaggle | `00` chuẩn bị dữ liệu → `01` embedding Jina → `02` retrieval (User Tower) → `03` reranking + đánh giá → `04` serving assets; `export_hm_images_zip`; **`hm_eda`** (EDA cho luận văn, xem `docs/04_notebook_guide.md` §11) |
 | [`scripts/`](scripts/) | **Công cụ dòng lệnh** | thăm dò / thống kê (`dataset_stats`, `probe_*`), kiểm chứng cổng (`parity_check`, `eval_port`, `verify_serving_assets`), `export_serving_bundle`, `sim_preference_feedback`; công cụ RAG (`check_llm`, `benchmark_rag`, `build_rag_notebooks`) |
 | [`configs/`](configs/) | Tham số | `hm.yaml` (tham chiếu; notebook đọc biến môi trường `HM_*`), `qdrant.yaml` |
 | [`tests/`](tests/) | Test (pytest) | `test_hm_*`, `test_preferences`, `test_mock_reviews`, `test_rag_*`, `test_chat_gateway`, `test_compact_weights` |

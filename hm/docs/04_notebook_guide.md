@@ -112,3 +112,10 @@ Giữ nguyên các quyết định kỹ thuật đã kiểm chứng ở lần ch
 
 ## 10. Đọc metric đúng
 Báo cáo HitRate/Recall/NDCG/MAP@12 trên cửa sổ 7 ngày, kèm Recall@100 và recall của tập ứng viên (cận trên của reranker), luôn cạnh `recent_popularity` và `popularity`; so sánh bằng bootstrap ghép cặp. Không so số của H&M với số Amazon leave-last-out (`01`, mục 7).
+
+## 11. Notebook EDA (`hm_eda.ipynb`)
+Phân tích khám phá cho chương dữ liệu của luận văn; **không thuộc pipeline huấn luyện**, không GPU, chạy vài phút, chỉ đọc (không ghi đè dữ liệu).
+* Đọc `data/hm/` (hoặc `HM_DATA_DIR`; trên Kaggle tự dò Dataset `hm-dataset-filled`). Cần cho từng phần: catalog (`items.parquet`) · thống kê toàn cục (`item_daily_counts.parquet`) · mẫu 50k (`train/rerank_train/valid/test.parquet`) · embedding (`*.npy`). Thiếu file nào thì phần đó tự bỏ qua; §7 (tuổi, trạng thái thành viên) chỉ chạy nếu có `customers.csv` gốc (`HM_RAW_DIR`).
+* Công tắc: `HM_EDA_EMBEDDINGS=0` (bỏ §6, tiết kiệm ~1 GB RAM), `HM_EDA_SAVE_FIGS=0`, `HM_EDA_OUT` (mặc định `data/artifacts/hm/eda/`).
+* Đầu ra: `figures/*.png` (16 hình, sẵn để chèn vào luận văn) và `eda_facts.json` (~100 con số chính). Notebook trong git không lưu output (như 00–03); bản đã chạy nằm ở `data/artifacts/hm/eda/hm_eda_executed.ipynb`.
+* Cần `polars`, `numpy`, `matplotlib` (`pip install matplotlib` nếu `.venv` chưa có).

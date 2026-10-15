@@ -35,148 +35,142 @@ Trợ lý đàm thoại mua sắm được thiết kế nhằm nâng cao trải 
 
 ---
 
-## 2.2. Nguồn dữ liệu và mô tả dữ liệu
+## 2.2. Nguồn dữ liệu và mô tả tập dữ liệu
 
-### 2.2.1. Nguồn dữ liệu Amazon Reviews 2023
-Đề tài sử dụng tập dữ liệu chuẩn mực quốc tế **Amazon Reviews 2023** do nhóm nghiên cứu của Giáo sư Julian McAuley tại Đại học California San Diego (UCSD) thu thập và công bố:
-- **Danh mục lựa chọn**: `Clothing_Shoes_and_Jewelry` – nhánh dữ liệu thời trang phong phú và phức tạp nhất trên Amazon, phản ánh đầy đủ đặc trưng thẩm mỹ thị giác và thuộc tính văn bản.
-- **Cấu trúc hai nguồn dữ liệu gốc**:
-  1. *Dữ liệu tương tác (User Reviews & Interactions)*: Chứa hàng triệu lượt đánh giá chi tiết gồm mã người dùng `user_id`, mã sản phẩm `parent_asin`, điểm số `rating` (1–5 sao), tiêu đề `title`, văn bản `text`, mốc thời gian `timestamp`, số lượt bình chọn hữu ích `helpful_vote` và cờ xác thực mua hàng `verified_purchase`.
-  2. *Siêu dữ liệu sản phẩm (Product Metadata)*: Chứa thông tin mô tả chi tiết của từng `parent_asin` gồm tên gọi, danh mục phân cấp đa tầng, thương hiệu, khoảng giá bán, danh sách thuộc tính chi tiết (`features`) và danh sách liên kết hình ảnh phân giải cao.
+### 2.2.1. Nguồn và phạm vi dữ liệu sử dụng
 
-### 2.2.2. Bộ dữ liệu thực nghiệm chốt của đề tài
-Để phục vụ quá trình huấn luyện và đánh giá nghiêm ngặt, đề tài đã xây dựng và đóng băng phiên bản dữ liệu thực nghiệm chính thức: **`balanced_u5_i2_v1`** (cấu hình tại `legacy/configs/balanced_dataset.yaml`).
+Đề tài sử dụng tập dữ liệu thực nghiệm **`hm_v1`**, được chuẩn bị từ nguồn *H&M Personalized Fashion Recommendations* [4]. Phạm vi mô tả trong mục này là dữ liệu đầu vào của thí nghiệm sau khi chọn khách hàng và chia theo thời gian, trước bước mã hóa ảnh và văn bản. Tập dữ liệu đang dùng gồm lịch sử mua hàng của **50.000 khách hàng** và bảng thông tin của **105.542 sản phẩm**. Dữ liệu được lưu dưới dạng Parquet; mỗi dòng giao dịch biểu thị một sản phẩm được một khách hàng mua vào một ngày cụ thể.
 
-| Đặc trưng thống kê | Giá trị định lượng | Ghi chú kỹ thuật |
-| :--- | :---: | :--- |
-| **Số lượng người dùng hợp lệ ($|\mathcal{U}|$ )** | **21.690** | Đã lọc qua K-core ($K_u \ge 5$) |
-| **Số lượng sản phẩm trong catalog ($\mathcal{I}$)** | **32.557** | Đã lọc qua K-core ($K_i \ge 2$) |
-| **Tổng số lượt tương tác tích cực ($rating \ge 4$)** | **198.200** | verified_purchase = True |
-| **Số tương tác tích cực dùng để huấn luyện (Train)** | **154.820** | Phân chia tuần tự theo thời gian |
-| **Số tương tác tích cực thẩm định (Validation)** | **21.690** | Tương tác áp chót ($t_{last-1}$) |
-| **Số tương tác tích cực kiểm thử (Test)** | **21.690** | Tương tác cuối cùng ($t_{last}$) |
-| **Độ dài lịch sử tương tác trung bình ở tập Train** | **7,14** | Đảm bảo đủ chiều dài cho Self-Attention |
-| **Tương tác âm mạnh dùng cho huấn luyện ($rating \le 2$)** | **12.886** | Khai thác hard-negative |
-| **Tỷ lệ sản phẩm mục tiêu Test hoàn toàn mới (Cold-target)** | **5,27%** | Thách thức thực tế đánh giá cold-start |
-| **Quy mô danh mục mở rộng lập chỉ mục vector (Qdrant)** | **152.086** | Catalog đầy đủ phục vụ tìm kiếm |
+Việc chọn mẫu chỉ dựa trên lịch sử trước ngày 02/09/2020. Khách hàng phải có ít nhất ba lượt mua trong giai đoạn này; sau đó, 50.000 khách được chọn có thể tái lập theo các nhóm mức độ hoạt động và hạt giống ngẫu nhiên cố định `20260922`. Với mỗi khách đã chọn, dữ liệu giữ tối đa 100 giao dịch gần nhất của giai đoạn lịch sử cũ và giữ toàn bộ giao dịch ở ba cửa sổ thời gian tiếp theo. Vì vậy, số liệu dưới đây phản ánh **tập thực nghiệm đang sử dụng**, không phải quy mô của toàn bộ dữ liệu công bố.
 
-Tập dữ liệu sau tiền xử lý được lưu trữ dưới các tệp Parquet bất biến tại `data/processed/balanced_u5_i2_v1/`:
-- `items.parquet`: Danh mục 32.557 sản phẩm kèm đầy đủ thông tin chuẩn hóa.
-- `train.parquet`: 154.820 tương tác lịch sử phục vụ huấn luyện User Tower và Reranker.
-- `valid.parquet`: 21.690 tương tác liền kề cuối phục vụ chọn siêu tham số và checkpoint.
-- `test.parquet`: 21.690 tương tác cuối cùng để đánh giá hiệu năng khách quan độc lập.
-- `test_context.parquet`: Toàn bộ lịch sử trước đó của các người dùng trong tập test.
-- `train_strong_negatives.parquet`: 12.886 tương tác đánh giá thấp ($rating \le 2$) để khai thác mẫu hard-negative.
-- `dataset_manifest.json`: Bảng kê cấu hình lọc, kích thước dữ liệu và mã kiểm tra toàn vẹn SHA256/MD5 nhằm bảo đảm khả năng tái lập thí nghiệm 100%.
+### 2.2.2. Quy mô và phân bố theo thời gian
+
+Tập giao dịch sau chọn mẫu có **1.273.677 lượt mua**, được chia thành bốn phần theo thứ tự thời gian. Bảng 2.1 trình bày số dòng, số khách hàng và số sản phẩm khác nhau trong từng phần; một khách hàng hoặc sản phẩm có thể xuất hiện ở nhiều phần.
+
+| Phần dữ liệu | Khoảng thời gian | Lượt mua | Khách hàng | Sản phẩm khác nhau |
+| :--- | :---: | ---: | ---: | ---: |
+| Lịch sử huấn luyện | 20/09/2018–01/09/2020 | 1.242.735 | 50.000 | 71.357 |
+| Cửa sổ chọn mô hình | 02/09/2020–08/09/2020 | 10.452 | 3.063 | 4.569 |
+| Kiểm định | 09/09/2020–15/09/2020 | 10.690 | 3.030 | 4.505 |
+| Kiểm thử | 16/09/2020–22/09/2020 | 9.800 | 2.799 | 4.200 |
+
+Trong phần lịch sử huấn luyện, mỗi khách có trung bình **24,85** lượt mua và trung vị **14** lượt. Số khách phát sinh giao dịch ở từng tuần sau nhỏ hơn 50.000 vì không phải khách nào cũng mua hàng trong mọi tuần. Tất cả khách xuất hiện trong phần kiểm thử đều đã có lịch sử mua ở phần huấn luyện; do đó, tập này phù hợp để đánh giá gợi ý cho khách đã có lịch sử, nhưng không đại diện cho tình huống khách hàng hoàn toàn mới.
+
+Các số liệu về quy mô, mức độ hoạt động của khách và sự giao nhau giữa tập kiểm thử với lịch sử huấn luyện được tính trực tiếp từ các bảng dữ liệu đang dùng trong notebook EDA [`eda_hm_v1_raw.ipynb`](../../hm/notebooks/eda_hm_v1_raw.ipynb).
+
+### 2.2.3. Cấu trúc dữ liệu thô đang dùng
+
+**Dữ liệu giao dịch** gồm mã khách hàng (`customer_id`), mã sản phẩm (`article_id`), ngày mua (`t_dat`), giá tại giao dịch (`price`) và mã kênh bán (`sales_channel_id`). Trường phân chia (`split`) được bổ sung khi chuẩn bị tập thực nghiệm để xác định cửa sổ thời gian của mỗi dòng. Mã khách hàng và mã sản phẩm là khóa liên kết giữa lịch sử mua và danh mục; giá là giá ghi nhận tại từng lượt mua, không phải một giá cố định của sản phẩm.
+
+**Dữ liệu sản phẩm** có một dòng cho mỗi mã hàng (`item_id`, tương ứng với `article_id` trong bảng giao dịch). Các thuộc tính được giữ lại gồm tên sản phẩm (`prod_name`), loại và nhóm sản phẩm (`product_type_name`, `product_group_name`), họa tiết (`graphical_appearance_name`), nhóm màu (`colour_group_name`), bộ phận và khu vực hàng hóa (`department_name`, `section_name`), cùng mô tả chi tiết bằng văn bản (`detail_desc`). Danh mục giữ cả những sản phẩm chưa được mua trong lịch sử của 50.000 khách đã chọn; bởi vậy, **105.542** sản phẩm trong bảng danh mục không đồng nghĩa với **71.357** sản phẩm có giao dịch ở phần huấn luyện. Các trường tên và phân loại không có giá trị thiếu trong bảng đang dùng; `detail_desc` thiếu khoảng **0,39%** số dòng.
+
+**Dữ liệu ảnh** là ảnh sản phẩm ở dạng JPEG, gắn với mã sản phẩm. Gói ảnh lưu cục bộ để phục vụ cửa hàng web chứa **72.811 ảnh** theo tiêu chí xuất các sản phẩm có hoạt động; đây là một phần của tập ảnh đã dùng khi chuẩn bị đặc trưng cho toàn danh mục thực nghiệm. Ảnh JPEG là dữ liệu đầu vào, chưa phải biểu diễn số học của ảnh.
+
+Dữ liệu hành vi trong tập này chỉ ghi nhận **lượt mua**. Tập không có điểm đánh giá hay nhận xét thật bằng văn bản của khách hàng; sản phẩm không được mua trong một cửa sổ cũng không thể mặc nhiên xem là phản hồi tiêu cực. Bảng thuộc tính khách hàng của nguồn công bố không được đưa vào tập đầu vào `hm_v1`, nên các đặc điểm như tuổi hay trạng thái thành viên không thuộc phạm vi mô tả và huấn luyện ở đây.
 
 ---
 
 ## 2.3. Quy trình tổng thể xây dựng hệ thống
 
-Kiến trúc tổng thể của hệ thống được chia làm hai luồng nghiệp vụ lớn vận hành song song và tương hỗ:
+Hệ thống được xây dựng theo hai quy trình liên kết: **quy trình ngoại tuyến** chuẩn bị dữ liệu, huấn luyện và đánh giá mô hình gợi ý; **quy trình trực tuyến** nhận yêu cầu trên cửa hàng, truy xuất sản phẩm và tạo câu trả lời có căn cứ. Cả hai cùng sử dụng danh mục H&M và mã sản phẩm thống nhất. Mô hình gợi ý học từ lịch sử mua trong tập `hm_v1`; dịch vụ chatbot khai thác thêm thuộc tính sản phẩm và trạng thái hội thoại để tìm kiếm, giải thích và điều chỉnh kết quả.
 
-```
-[ DỮ LIỆU GỐC: Amazon Reviews 2023 ]
-                  │
-                  ▼
-   [ Tiền xử lý & Iterative K-core ] ──► Cố định Dataset: balanced_u5_i2_v1
-                  │
-        ┌─────────┴────────────────────────────────────────┐
-        ▼                                                  ▼
-[ LUỒNG GỢI Ý HAI GIAI ĐOẠN ]                     [ LUỒNG CHATBOT RAG ]
-        │                                                  │
-  Jina CLIP v2 (1024-d Embeddings)                  Qdrant Vector DB (Named Vectors)
-        │                                           Collections: `products` & `reviews`
-        ├──────────────────────────┐                       │
-        ▼                          ▼                       ▼
-[ User Tower (SASRec) ]   [ Multi-source Union ]   [ User Request: Text / Image ]
-  Top-1000 Ứng viên        Budget: 2000 Ứng viên           │
-        │                          │                       ▼
-        └─────────────┬────────────┘               [ Intent Classifier (Rule-based) ]
-                      ▼                                    │
-          [ Residual Listwise Reranker ]                   ├─ Search / Recommend / Refine
-            Top-K Xếp hạng tối ưu                          ├─ Explain / Compare
-                      │                                    │
-                      ▼                                    ▼
-               Personalization                     [ Hybrid Retrieval & RRF ]
-                      │                             Vector similarity + Payload filter
-                      │                                    │
-                      └─────────────────┬──────────────────┘
-                                        ▼
-                         [ Grounding & Hallucination Guard ]
-                           Kiểm duyệt [P#], [R#.#], Giá tiền
-                                        │
-                                        ▼
-                         [ Phản hồi hoàn chỉnh tới Web UI ]
+```mermaid
+flowchart LR
+    A["Giao dịch và thông tin sản phẩm H&M"] --> B["Tập hm_v1 theo thời gian"]
+    A --> S["Thống kê bán hàng trước mốc dự đoán"]
+    B --> E["Biểu diễn văn bản và ảnh"]
+    B --> T["Huấn luyện User Tower"]
+    E --> T
+    T --> C["Hợp ứng viên từ 7 nguồn"]
+    S --> C
+    E --> C
+    C --> R["LightGBM xếp hạng lại"]
+    R --> V["Đánh giá trên cửa sổ kiểm thử"]
+    E --> Q["Chỉ mục sản phẩm Qdrant"]
+    R --> P["Dịch vụ gợi ý"]
+    U["Yêu cầu từ giao diện web"] --> H["Phân tích ý định và bộ lọc"]
+    H --> M["Bộ nhớ sở thích theo sản phẩm"]
+    M --> P
+    M --> Q
+    H --> Q
+    H --> P
+    Q --> G["Ngữ cảnh sản phẩm và bằng chứng"]
+    P --> G
+    G --> L["Sinh và kiểm chứng câu trả lời"]
+    L --> U
 ```
 
-### 2.3.1. Pipeline xử lý dữ liệu và huấn luyện mô hình gợi ý
-1. **Trích xuất đặc trưng**: Mã hóa văn bản và hình ảnh sản phẩm bằng Jina CLIP v2 ($D = 1024$).
-2. **Huấn luyện User Tower**: Tiếp nhận chuỗi tương tác (được đệm phải `pad_right`), nén qua mạng Self-Attention, tối ưu hàm mất mát Sampled-Softmax kết hợp phân phối âm Popularity và hiệu chỉnh log-Q.
-3. **Khai thác ứng viên đa nguồn**: Kết hợp đồng thời 4 bộ sinh ứng viên (User Tower, Popularity, Content Centroid, Last-item) theo cấu hình `CandidateBudget` để tối đa hóa Candidate Recall.
-4. **Huấn luyện Reranker**: Huấn luyện mạng `ResidualListwiseRanker` với 15 đặc trưng trên các mẫu hard-negative khai thác từ các nguồn ứng viên bị xếp sai.
+### 2.3.1. Quy trình chuẩn bị dữ liệu, huấn luyện và đánh giá
 
-### 2.3.2. Pipeline hoạt động của Chatbot RAG
-1. **Tiếp nhận & Phân tích ý định**: Tiếp nhận câu hỏi hoặc ảnh từ người dùng, chuẩn hóa văn phong tiếng Việt (bỏ dấu kiểm tra `fold`, glossary tiếng Anh), bóc tách thực thể (thương hiệu, khoảng giá VND, màu sắc) và phân loại ý định.
-2. **Truy xuất lai (Hybrid Retrieval)**: Mã hóa truy vấn bằng Jina CLIP v2, tìm kiếm song song trên named vector `text` và `image` trong Qdrant, hợp nhất bằng Weighted Reciprocal Rank Fusion (RRF), đồng thời áp dụng các bộ lọc số/chuỗi cứng trong Qdrant.
-3. **Cá nhân hóa theo phiên**: Kết hợp điểm số từ Recommender service (`PERSONAL_WEIGHT = 0.6`) nếu người dùng có lịch sử giỏ hàng hoặc các mặt hàng vừa xem trong phiên.
-4. **Xây dựng ngữ cảnh & Kiểm chứng**: Trích xuất tối đa 4 đánh giá tiêu biểu nhất cho mỗi sản phẩm liên quan, đánh mã trích dẫn `[P#]`, `[R#.#]`, kiểm duyệt tính trung thực về giá bán và sinh câu trả lời (qua LLM hoặc Template Engine dự phòng).
+**Bước 1 — cố định dữ liệu và mốc thời gian.** Lịch sử của 50.000 khách được chia thành phần huấn luyện, cửa sổ chọn mô hình, kiểm định và kiểm thử như Bảng 2.1. Danh mục giữ 105.542 sản phẩm, kể cả sản phẩm chưa xuất hiện trong giao dịch huấn luyện. Ngoài lịch sử của mẫu khách, hệ thống chuẩn bị thống kê bán hàng theo sản phẩm và ngày để xác định độ phổ biến, sản phẩm mới xuất hiện và giá tham chiếu tại từng mốc dự đoán. Các thống kê này chỉ lấy giao dịch trước mốc của cửa sổ đích. Việc dùng thống kê cấp sản phẩm từ toàn bộ giao dịch là một giả định về thông tin sẵn có khi vận hành, không phải lịch sử cá nhân của 50.000 khách được chọn.
+
+**Bước 2 — tạo biểu diễn nội dung và học sở thích.** Tên, thuộc tính, mô tả và ảnh sản phẩm được mã hóa bằng Jina CLIP v2 thành biểu diễn văn bản và hình ảnh 512 chiều. User Tower kết hợp biểu diễn nội dung với mã sản phẩm; hồ sơ khách được tổng hợp từ tối đa 30 sản phẩm đã mua gần nhất, có trọng số theo độ mới. Mô hình học trên phần lịch sử huấn luyện bằng các cặp lịch sử–sản phẩm mua tiếp theo và các sản phẩm lấy mẫu làm đối chứng. Số epoch được chọn bằng cửa sổ 02–08/09/2020. Bộ mã hóa lịch sử này dùng trung bình có trọng số theo độ mới.
+
+**Bước 3 — sinh ứng viên và xếp hạng lại.** Ở mỗi thời điểm dự đoán, hệ thống hợp các ứng viên từ bảy nguồn: điểm User Tower, sản phẩm bán chạy gần đây, sản phẩm khách từng mua, sản phẩm mới xuất hiện, sản phẩm tương tự về nội dung, sản phẩm phổ biến toàn thời gian và kênh nội dung dành cho sản phẩm chưa từng bán. Các nguồn được khử trùng lặp; không thêm sản phẩm đích từ nhãn đánh giá vào danh sách ứng viên. Từ các ứng viên, hệ thống tính 24 đặc trưng về điểm mô hình, mức độ bán gần đây, nội dung, lịch sử khách, giá và nguồn ứng viên; sau đó dùng LightGBM LambdaRank để sắp xếp lại. Nhãn ở cửa sổ chọn mô hình dùng để huấn luyện bộ xếp hạng, còn cửa sổ kiểm định dùng để dừng sớm và chọn tham số phục vụ.
+
+**Bước 4 — đánh giá độc lập.** Sau khi chốt cấu hình, các thành phần được huấn luyện lại với những cửa sổ được phép sử dụng trước ngày 16/09/2020, rồi dự đoán các sản phẩm khách sẽ mua trong tuần 16–22/09/2020. Phần kiểm thử không được dùng để chọn siêu tham số. Kết quả gợi ý được đối chiếu với sản phẩm mua thật trong tuần đích trên toàn danh mục, đồng thời báo riêng các trường hợp sản phẩm ít hoặc chưa có lịch sử bán. Chi tiết giao thức và các chỉ số được trình bày ở chương thực nghiệm.
+
+### 2.3.2. Quy trình phục vụ gợi ý và chatbot RAG
+
+Trong hệ thống vận hành, giao diện web gửi yêu cầu tới backend; backend chuyển yêu cầu hội thoại tới dịch vụ RAG. Dịch vụ RAG dựng hồ sơ sở thích từ các phản hồi đã lưu và gọi dịch vụ gợi ý khi cần cá nhân hóa. Cửa hàng hiển thị các sản phẩm có ảnh trong danh mục H&M, còn chỉ mục Qdrant lưu biểu diễn văn bản, hình ảnh và các thuộc tính cần lọc của những sản phẩm được bán trên web. Mốc thống kê bán hàng của bản demo được cố định tại ngày 16/09/2020 để phù hợp với cấu hình mô hình đã đánh giá.
+
+1. **Hiểu yêu cầu.** Thành phần điều phối xác định ý định tìm kiếm, gợi ý, lọc lại, giải thích hoặc so sánh; đồng thời lưu các điều kiện như loại hàng, màu, nhóm khách và khoảng giá trong phiên. Khi người dùng thay đổi điều kiện, hệ thống cập nhật trạng thái phiên và truy xuất hoặc lọc lại danh sách ứng viên.
+2. **Ghi nhớ phản hồi và dựng hồ sơ sở thích.** Hệ thống lấy sản phẩm trong giỏ hàng và đơn mua từ cửa hàng, đồng thời ghi nhận các phản hồi gắn với mã sản phẩm như xem, nhấp, thích và không thích. Phản hồi phát sinh trong phiên được giữ ở bộ nhớ phiên; với người dùng đăng nhập, backend còn lưu các sự kiện phản hồi vào PostgreSQL và gửi lại những sự kiện gần đây cho các lượt chat sau. Hồ sơ sở thích được tính theo loại và thời điểm sự kiện, với trọng số giảm dần khi sự kiện cũ đi. Các sản phẩm có tín hiệu tích cực được ghép vào lịch sử giỏ hàng/đơn mua để làm đầu vào cho User Tower và bộ xếp hạng lại; sản phẩm bị không thích được loại khỏi kết quả, còn các sản phẩm tương tự có thể bị giảm điểm. Việc cập nhật hồ sơ chỉ thay đổi đầu vào và thứ hạng tại lúc suy luận, không huấn luyện lại mô hình.
+3. **Tìm kiếm và cá nhân hóa.** Truy vấn văn bản hoặc ảnh được mã hóa vào cùng không gian biểu diễn với sản phẩm. Dịch vụ tìm trên hai nhánh vector văn bản và hình ảnh của Qdrant, hợp nhất thứ hạng bằng Reciprocal Rank Fusion và áp dụng bộ lọc thuộc tính cùng các sản phẩm cần loại theo hồ sơ sở thích. Nếu có lịch sử mua hoặc phản hồi tích cực, thứ hạng từ dịch vụ gợi ý được dùng như một tín hiệu bổ sung cho kết quả tìm kiếm.
+4. **Tạo ngữ cảnh và trả lời.** Hệ thống lấy thông tin của đúng các sản phẩm được đề xuất, gắn mã dẫn chiếu cho thuộc tính sản phẩm và bằng chứng liên quan, rồi tạo câu trả lời bằng mô hình ngôn ngữ hoặc mẫu câu dự phòng. Câu trả lời được kiểm tra mã dẫn chiếu và các số tiền trước khi trả về. Giá hiển thị trên cửa hàng là **giá tham khảo** được quy đổi từ dữ liệu giao dịch đã chuẩn hóa, không phải giá niêm yết thực tế.
+
+Nguồn H&M không cung cấp nhận xét văn bản của người mua. Để minh họa luồng giải thích có trích dẫn, bản demo ghép một số nhận xét từ bộ dữ liệu khác với sản phẩm H&M tương tự và luôn gắn nhãn **“đánh giá minh hoạ”**. Các nhận xét này không được coi là phản hồi thật về sản phẩm H&M và không tham gia huấn luyện hay đánh giá mô hình gợi ý.
+
+Bộ nhớ sở thích hiện được sử dụng trong luồng hội thoại; danh sách gợi ý trên trang chủ cửa hàng chưa nhận đầu vào này.
+
+Quy trình huấn luyện và đánh giá được đối chiếu với các notebook [`02_hm_retrieval.ipynb`](../../hm/notebooks/02_hm_retrieval.ipynb), [`03_hm_reranking_evaluation.ipynb`](../../hm/notebooks/03_hm_reranking_evaluation.ipynb); luồng phục vụ, nguồn gốc đánh giá minh hoạ và cơ chế lưu sở thích được đối chiếu với tài liệu [chuyển hệ thống sang H&M](../../hm/docs/06_web_migration.md) và [bộ nhớ sở thích tương tác](../../hm/docs/07_preference_memory.md).
 
 ---
 
-## 2.4. Tiền xử lý và xây dựng dữ liệu thực nghiệm
+## 2.4. Tiền xử lý và chuẩn bị dữ liệu trước huấn luyện
 
-### 2.4.1. Làm sạch và lọc dữ liệu tương tác
-- **Bộ lọc mua hàng xác thực**: Loại bỏ toàn bộ đánh giá có `verified_purchase = False` nhằm bảo đảm dữ liệu phản ánh hành vi tiêu dùng có cam kết tài chính thực tế.
-- **Khử trùng lặp**: Trong trường hợp một người dùng tương tác nhiều lần với cùng một sản phẩm (mua lại hoặc cập nhật đánh giá), hệ thống chỉ lưu lại tương tác gần nhất tại mốc thời gian lớn nhất để tránh làm lệch trọng số chú ý trong chuỗi tuần tự.
-- **Gán nhãn tương tác**:
-  - Tương tác tích cực: Điểm đánh giá $rating \ge 4.0$ (chiếm 198.200 bản ghi).
-  - Tương tác âm mạnh: Điểm đánh giá $rating \le 2.0$ (chiếm 12.886 bản ghi), được lưu riêng để làm nguồn khai thác negative mẫu mực cho tầng reranker.
-  - Điểm trung tính: $rating = 3.0$ bị loại bỏ khỏi tập mục tiêu.
+Đầu vào của quy trình này là **tập hm_v1 đang sử dụng**: bảng thông tin sản phẩm, bốn bảng giao dịch đã chia theo thời gian, ảnh sản phẩm và bảng thống kê bán hàng theo sản phẩm–ngày. Việc chọn khách hàng và tạo tập hm_v1 đã được nêu ở mục 2.2; mục này bắt đầu từ những dữ liệu đã có và kết thúc khi lịch sử hành vi, đặc trưng nội dung và thống kê theo thời điểm đã sẵn sàng cho mô hình. Các bước tối ưu trọng số thuộc mục 2.5.
 
-### 2.4.2. Lọc Iterative K-core và xử lý dữ liệu thưa
-Để khắc phục tình trạng ma trận tương tác có mật độ quá thấp làm suy giảm khả năng hội tụ của mạng Self-Attention, quy trình lọc lặp $K$-core được hiện thực qua giải thuật:
+### 2.4.1. Kiểm tra dữ liệu đầu vào và thống nhất mã sản phẩm
 
-```python
-def iterative_k_core(df: pl.DataFrame, k_user: int = 5, k_item: int = 2) -> pl.DataFrame:
-    """Lọc lặp đồng thời user và item cho đến khi hội tụ."""
-    while True:
-        initial_len = len(df)
-        user_counts = df.group_by("user_id").len()
-        valid_users = user_counts.filter(pl.col("len") >= k_user).select("user_id")
-        df = df.join(valid_users, on="user_id")
-        
-        item_counts = df.group_by("item_id").len()
-        valid_items = item_counts.filter(pl.col("len") >= k_item).select("item_id")
-        df = df.join(valid_items, on="item_id")
-        
-        if len(df) == initial_len:
-            break
-    return df
-```
+Trước hết, hệ thống kiểm tra lược đồ giao dịch gồm mã khách hàng (customer_id), mã sản phẩm (article_id), ngày mua (t_dat), giá giao dịch (price), mã kênh bán (sales_channel_id) và nhãn cửa sổ (split). Mã sản phẩm được giữ ở dạng chuỗi để không mất chữ số 0 đầu mã. Phép kiểm tra trực tiếp trên cả bốn bảng của tập hm_v1 cho kết quả: **0 giá trị null** ở các trường giao dịch, **0 mã sản phẩm không có trong danh mục**, **0 giá bằng 0, âm hoặc không hữu hạn**, và **0 mã kênh bán ngoài hai giá trị 1–2**. Trong bảng sản phẩm, item_id là duy nhất; tám trường định danh, tên và phân loại không có null hoặc chuỗi rỗng. Riêng detail_desc thiếu **416/105.542** dòng (0,39%); giá trị này được thay bằng chuỗi rỗng **khi ghép văn bản đầu vào**, không xóa sản phẩm khỏi danh mục.
 
-Nhờ quy trình này, toàn bộ 21.690 người dùng đều có ít nhất 5 tương tác (đảm bảo ít nhất 3 tương tác trong tập train sau khi giữ lại 2 cho valid và test), độ dài chuỗi hành vi trung bình đạt 7,14, tạo điều kiện lý tưởng cho cơ chế Attention học biểu diễn sở thích.
+Trùng lặp được đo theo hai mức: *trùng hoàn toàn* khi mọi cột của hai dòng giống nhau, và *trùng khách–sản phẩm–ngày* khi ba khóa này giống nhau dù giá hoặc kênh bán có thể khác. Số trong Bảng 2.2 là **số dòng vượt quá số dòng duy nhất** theo từng định nghĩa, không phải số nhóm trùng.
 
-### 2.4.3. Chia tập dữ liệu theo thời gian và kiểm tra rò rỉ dữ liệu
-- **Giao thức Chronological Leave-last-out**:
-  Đối với mỗi người dùng $u$, sắp xếp toàn bộ chuỗi tương tác tích cực theo `timestamp`:
-  $$(i_1, t_1), (i_2, t_2), \dots, (i_{m-2}, t_{m-2}), (i_{m-1}, t_{m-1}), (i_m, t_m)$$
-  - Target Kiểm thử (Test Target): $i_m$
-  - Target Thẩm định (Validation Target): $i_{m-1}$
-  - Tập huấn luyện (Train Sequence): $(i_1, i_2, \dots, i_{m-2})$
-- **Kiểm tra chống rò rỉ dữ liệu (Anti-leakage Checks)**:
-  - Kiểm tra vi phạm thời gian: Bảo đảm $t_{train} < t_{valid} < t_{test}$ trên 100% người dùng.
-  - Không bao giờ sử dụng dữ liệu từ Validation hay Test để tính toán độ phổ biến hay tạo embedding hành vi trong quá trình huấn luyện.
+| Phần dữ liệu | Số dòng | Trùng hoàn toàn | Trùng khách–sản phẩm–ngày |
+| :--- | ---: | ---: | ---: |
+| Huấn luyện | 1.242.735 | 112.643 | 121.790 |
+| Chọn mô hình | 10.452 | 874 | 948 |
+| Kiểm định | 10.690 | 946 | 1.028 |
+| Kiểm thử | 9.800 | 914 | 953 |
 
-### 2.4.4. Chuẩn bị đặc trưng văn bản và hình ảnh
-- **Mô hình trích xuất**: `jinaai/jina-clip-v2` chạy trên môi trường Kaggle GPU với 2x NVIDIA T4.
-- **Đặc trưng thị giác (Image Embeddings)**:
-  - Ảnh sản phẩm được tiền xử lý về kích thước chuẩn $224 \times 224$ và đưa qua mạng EVA-02 ViT-L/14.
-  - Xử lý ngoại lệ ảnh lỗi: Đối với 557 sản phẩm (~0.37%) có URL ảnh hỏng hoặc mất trên CDN của Amazon, hệ thống kích hoạt cơ chế ảnh đen chuẩn `(224, 224, color=0)` và gắn cờ `is_image_fallback = True` trong metadata để nhận diện.
-  - Ma trận vector `image_embeddings.npy` có kích thước $(152086, 1024)$, chuẩn hóa $L_2 = 1.0$, hoàn toàn không chứa giá trị `NaN` hay `Inf`.
-- **Đặc trưng ngữ nghĩa văn bản (Text Embeddings)**:
-  - Văn bản đầu vào được chuẩn hóa theo mẫu: `"Title: {title} | Brand: {brand} | Category: {category} | Description: {features}"`.
-  - Đưa qua nhánh Text Transformer của Jina CLIP v2, trích xuất vector 1024 chiều, chuẩn hóa $L_2 = 1.0$.
+Dữ liệu không có mã giao dịch hay trường số lượng để phân biệt chắc chắn một dòng lặp là lỗi ghi nhận hay nhiều đơn vị được mua cùng ngày. Vì vậy, quy trình **không xóa các dòng trùng khỏi bảng giao dịch** và vẫn giữ chúng khi thống kê số lượt bán. Khi xây dựng chuỗi đầu vào cho mô hình, mỗi sản phẩm chỉ được giữ một lần trong giỏ của cùng khách và cùng ngày; các lần mua lại ở **những ngày khác nhau** vẫn được giữ. Trong phần huấn luyện có **41.326 cặp khách–sản phẩm** xuất hiện ở ít nhất hai ngày khác nhau. Cách xử lý này bảo toàn tín hiệu mua lại theo thời gian mà không tạo thứ tự giả hoặc lặp một sản phẩm nhiều lần trong cùng giỏ.
+
+Sau kiểm tra, mỗi item_id được ánh xạ sang một chỉ số nguyên từ 1 đến 105.542 theo thứ tự của bảng sản phẩm; chỉ số 0 dành riêng cho phần đệm của chuỗi lịch sử. Cùng một phép ánh xạ được dùng cho giao dịch, thống kê theo ngày, văn bản và ảnh, nhờ đó các hàng đặc trưng luôn tương ứng với đúng sản phẩm. Tập H&M chỉ ghi nhận hành vi mua, vì vậy không có bước lọc theo điểm sao, cờ xác thực mua hàng hoặc tạo nhãn âm từ đánh giá thấp. Toàn bộ phép đếm null, trùng lặp và khóa liên kết có mã cùng kết quả đã chạy trong [notebook EDA của hm_v1](../../hm/notebooks/eda_hm_v1_raw.ipynb), mục 3.1.
+
+### 2.4.2. Tổ chức lịch sử mua và tạo cặp đầu vào–đích
+
+Trong từng cửa sổ, giao dịch được nhóm theo khách hàng và ngày mua thành các *giỏ hàng theo ngày*. Những mã sản phẩm trùng nhau trong cùng một giỏ được gộp thành một mã; các giỏ sau đó được sắp theo ngày. Cách tổ chức này tránh áp đặt một thứ tự mua giả giữa những sản phẩm chỉ biết là được mua trong cùng ngày.
+
+Với khách có từ hai ngày mua trở lên, mỗi sản phẩm của ngày hiện tại có thể làm sản phẩm đích, còn lịch sử đầu vào chỉ gồm sản phẩm thuộc **những ngày trước đó**. Trường hợp khách chỉ có một ngày mua nhưng mua nhiều sản phẩm, các sản phẩm còn lại trong giỏ được dùng làm ngữ cảnh đồng mua cho từng sản phẩm đích. Khi đưa lịch sử vào User Tower, hệ thống chỉ giữ tối đa 30 sản phẩm gần nhất và đệm giá trị 0 ở **bên trái** nếu chuỗi ngắn hơn 30. Đây là bước dựng ví dụ đầu vào; việc lấy mẫu sản phẩm đối chứng và cập nhật trọng số được thực hiện ở giai đoạn huấn luyện.
+
+Lịch sử để dự đoán cũng tuân theo trục thời gian: cửa sổ chọn mô hình dùng lịch sử huấn luyện; cửa sổ kiểm định có thêm giao dịch của cửa sổ chọn mô hình; cửa sổ kiểm thử có thêm giao dịch của cửa sổ kiểm định. Nhãn mua của chính cửa sổ đang dự đoán không được đưa vào lịch sử đầu vào của cửa sổ đó.
+
+### 2.4.3. Chuẩn bị thống kê sản phẩm theo mốc dự đoán
+
+Hệ thống đọc bảng đếm sẵn có theo cặp sản phẩm–ngày, gồm số lượt mua và tổng giá ghi nhận. Với mỗi cửa sổ đích có ngày bắt đầu $c$, chỉ những dòng có ngày giao dịch **nhỏ hơn $c$** được dùng để tính số lượt bán trước đó, số lượt bán trong 7 ngày gần nhất, ngày bán đầu tiên và giá tham chiếu. Các thống kê này hỗ trợ sinh ứng viên và xếp hạng ở những bước sau, đặc biệt khi mức độ bán của sản phẩm thay đổi nhanh theo mùa.
+
+Bảng đếm cấp sản phẩm bao quát giao dịch của toàn bộ khách trong nguồn dữ liệu, trong khi lịch sử cá nhân dùng để học chỉ thuộc mẫu 50.000 khách của hm_v1. Đây là giả định rằng hệ thống vận hành có sẵn thống kê bán hàng chung tại thời điểm dự đoán. Điều kiện t_dat < c bảo đảm thống kê không chứa lượt mua của tuần cần dự đoán; không dùng số liệu tương lai để xác định mức độ phổ biến hoặc sản phẩm đã bán.
+
+### 2.4.4. Chuẩn bị văn bản, ảnh và kiểm tra đặc trưng
+
+Đối với mỗi sản phẩm, các giá trị thiếu ở trường mô tả detail_desc được thay bằng chuỗi rỗng khi tạo văn bản đầu vào. Văn bản được ghép theo thứ tự: tên sản phẩm, loại sản phẩm, nhóm sản phẩm, nhóm màu, bộ phận kinh doanh và mô tả chi tiết. Các trường họa tiết và khu vực hàng hóa vẫn được giữ trong bảng thuộc tính để phục vụ lọc hoặc tạo đặc trưng về sau, nhưng không nằm trong chuỗi văn bản đưa vào bộ mã hóa ở lần thực nghiệm này.
+
+Văn bản và ảnh được mã hóa riêng bằng **Jina CLIP v2**; mỗi sản phẩm nhận một vector văn bản và một vector ảnh 512 chiều ở định dạng float32, sau đó được chuẩn hóa theo chuẩn $L_2$. Ảnh được nối với hàng sản phẩm qua mã item_id, không qua vị trí tệp trong thư mục. Với sản phẩm không có ảnh hợp lệ, hàng biểu diễn ảnh được giữ bằng vector 0 thay vì gán ảnh giả. Theo bảng kê của lần mã hóa đã dùng, **105.100/105.542** sản phẩm có biểu diễn ảnh và **442** sản phẩm thiếu ảnh. Gói 72.811 ảnh nêu ở mục 2.2 là gói sản phẩm có ảnh được xuất để phục vụ cửa hàng web; nó không phải toàn bộ ảnh đã dùng khi tạo đặc trưng cho danh mục thực nghiệm.
+
+Trước khi huấn luyện, hệ thống đối chiếu số hàng của hai ma trận đặc trưng với 105.542 dòng danh mục, kiểm tra chiều vector và kiểu dữ liệu, rồi thêm một hàng toàn 0 ở đầu để tương ứng với chỉ số đệm. Như vậy, chỉ số sản phẩm trong lịch sử mua trỏ tới cùng hàng trong bảng đặc trưng văn bản và ảnh. Metadata và ảnh sản phẩm được xem là thông tin danh mục có thể biết trước tại mốc dự đoán; chỉ các **nhãn giao dịch** và thống kê bán hàng phải tuân theo giới hạn thời gian của từng cửa sổ.
+
+Các phép đối chiếu kích thước và mã sản phẩm được kiểm tra trên các bảng hm_v1 hiện có; quy trình dựng giỏ hàng và ánh xạ chỉ số nằm trong notebook [02_hm_retrieval.ipynb](../../hm/notebooks/02_hm_retrieval.ipynb), còn mẫu văn bản, xử lý ảnh và bảng kê độ phủ nằm trong notebook [01_hm_jina_embeddings.ipynb](../../hm/notebooks/01_hm_jina_embeddings.ipynb).
 
 ---
 
